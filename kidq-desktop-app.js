@@ -198,6 +198,13 @@
 
   // The household label for whoever picked the session. One family account, so
   // it is the same everywhere it appears rather than varying per video.
+  //
+  // "Mumma & Papa" is a fixed string for the MVP, decided rather than pending:
+  // it is not derived from the family's parent_name and the parent cannot set
+  // it. The cost is that it is wrong for households it does not describe - a
+  // single parent, grandparents raising a child, or a family who say Amma and
+  // Appa. Making it settable is a post-MVP change and needs nothing from the
+  // API that is not already there.
   const pickerName = () => (state.session && state.session.pickedBy) || "Mumma & Papa";
   const pickerNameHtml = () => pickerName().replace(/&/g, "&amp;");
   const totalVideos = () => state.session.videos.length;
