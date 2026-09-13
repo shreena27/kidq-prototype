@@ -448,18 +448,28 @@
     findRotation += 1;
     findScreen.classList.remove("celebrate");
     findScreen.style.setProperty("--find-colour", c.hex);
-    $$("#find-swatches i").forEach((s) => { s.style.background = c.hex; });
+    $$("#find-swatches i").forEach((s) => {
+      s.style.background = c.hex;
+      // restart the staggered entrance: the elements persist between breaks, so
+      // without a reflow the animation only ever plays on the first one
+      s.style.animation = "none";
+      void s.offsetWidth;
+      s.style.animation = "";
+    });
     $("#find-headline").textContent = `Find 3 ${c.name} things!`;
-    $("#find-sub").textContent = "Look around the room. Take your time.";
-    $("#find-done").hidden = false;
+    $("#find-sub").textContent = "Look around the room. Tap the sun when you find them.";
+    // the sun is the control, so it is disabled rather than hidden - hiding it
+    // would remove the mascot from the celebration
+    $("#find-done").disabled = false;
     showScreen("screen-find");
   }
-  $("#find-done").addEventListener("click", () => {
+  $("#find-done").addEventListener("click", (e) => {
     if (findScreen.classList.contains("celebrate")) return;
     findScreen.classList.add("celebrate");
     $("#find-headline").textContent = "You found them! ✨";
     $("#find-sub").textContent = "Great looking.";
-    $("#find-done").hidden = true;
+    $("#find-done").disabled = true;
+    pop(e.currentTarget);
     safePlay(chime);
     later(startChoice, 1900);
   });

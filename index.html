@@ -209,7 +209,8 @@
       <div class="kq-centercol" style="gap:20px">
         <span class="kq-ptpill">Playtime!</span>
         <h1 class="kq-findhead" id="find-headline" aria-live="polite">Find 3 red things!</h1>
-        <div class="kq-bsunwrap" style="width:min(30cqw,132px)">
+        <button class="kq-bsunwrap kq-findsun" id="find-done" style="width:min(30cqw,132px)"
+                aria-label="I found them">
           <span class="halo" id="find-halo"></span>
           <svg class="bsun" style="transform:none" viewBox="0 0 60 60" aria-hidden="true">
             <g class="rays"><line x1="30" y1="1.5" x2="30" y2="9.5"/><line x1="50" y1="30" x2="58.5" y2="30"/><line x1="44" y1="16" x2="50" y2="10"/><line x1="44" y1="44" x2="50" y2="50"/><line x1="30" y1="50.5" x2="30" y2="58.5"/><line x1="10" y1="50" x2="16" y2="44"/><line x1="1.5" y1="30" x2="10" y2="30"/><line x1="10" y1="10" x2="16" y2="16"/></g>
@@ -217,10 +218,9 @@
             <circle class="eye" cx="24.5" cy="28" r="1.9" fill="#2E2A24"/><circle class="eye" cx="35.5" cy="28" r="1.9" fill="#2E2A24"/>
             <path d="M24.5 34.5 Q30 39 35.5 34.5" fill="none" stroke="#2E2A24" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
-        </div>
+        </button>
         <div class="kq-swatchrow" id="find-swatches" aria-hidden="true"><i></i><i></i><i></i></div>
-        <p class="kq-findsub" id="find-sub">Look around the room. Take your time.</p>
-        <button class="kq-foundbtn" id="find-done">I found them!</button>
+        <p class="kq-findsub" id="find-sub">Look around the room. Tap the sun when you find them.</p>
       </div>
     </div>
   </section>

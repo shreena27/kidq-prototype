@@ -307,14 +307,35 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-findhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
   color:var(--ink); text-wrap:balance; min-height:1.2em}
 .kq-findsub{font-size:16.5px; font-weight:500; color:var(--ink-soft)}
-.kq-swatchrow{display:flex; gap:12px; justify-content:center}
-.kq-swatchrow i{width:22px; height:22px; border-radius:50%;
-  background:var(--find-colour,var(--sun-deep)); opacity:.9}
-.kq-foundbtn{font-family:var(--disp); font-weight:800; font-size:19px; color:var(--cream);
-  background:var(--teal); border:none; padding:13px 30px; border-radius:99px; cursor:pointer;
-  transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .2s ease}
-.kq-foundbtn:hover{background:var(--teal-deep); transform:translateY(-2px)}
-.kq-foundbtn:active{transform:scale(.95)}
+/* The colour the child is hunting for. For a pre-reader these swatches ARE the
+   instruction - the headline names the colour in a word they may not read yet -
+   so they are sized to be read at a glance, not as decoration.
+   Border and no shadow, deliberately: they must not read as tappable, because
+   "I found them!" is the only control on this screen. The border also gives pale
+   colours (yellow especially) a defined edge against the cream sky.
+   Bigger also separates them from .kq-bdots on the breathing break, which is the
+   same shape - a row of three dots under a sun - but counts breaths. */
+.kq-swatchrow{display:flex; gap:16px; justify-content:center; margin-top:4px}
+.kq-swatchrow i{width:48px; height:48px; border-radius:50%;
+  background:var(--find-colour,var(--sun-deep));
+  border:3px solid rgba(46,42,36,.14);
+  opacity:0; transform:scale(.5);
+  animation:kq-swatchin .45s cubic-bezier(.34,1.56,.64,1) forwards}
+.kq-swatchrow i:nth-child(2){animation-delay:.1s}
+.kq-swatchrow i:nth-child(3){animation-delay:.2s}
+@keyframes kq-swatchin{to{opacity:1; transform:none}}
+/* The sun itself is the "I found them" control, matching the sun-as-button used
+   on sunrise and on the after-break choice screen. One tap target per screen,
+   and it is the mascot the child is already looking at. */
+.kq-findsun{border:none; background:none; padding:0; cursor:pointer; display:block;
+  transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+.kq-findsun:hover:not(:disabled){transform:translateY(-3px) scale(1.04)}
+.kq-findsun:active:not(:disabled){transform:scale(.94)}
+.kq-findsun:focus-visible{outline:3px solid var(--teal-deep); outline-offset:6px; border-radius:50%}
+.kq-findsun:disabled{cursor:default}
+/* pop() adds .tapped; every other screen scopes its own rule for it, so this one
+   needs its own or the tap would animate nothing */
+.kq-findsun.tapped svg{animation:pop .55s ease-out}
 /* the sun wears the colour of the hunt */
 #screen-find .kq-bsunwrap .halo{background:radial-gradient(circle,
   color-mix(in srgb, var(--find-colour,#FFC64D) 55%, transparent) 0%, transparent 70%)}
@@ -574,6 +595,8 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-greet{font-size:46px}
   #screen-choice .kq-centercol{top:160px; gap:14px}
   .kq-pickhead{font-size:26px}
+  .kq-swatchrow{gap:19px}
+  .kq-swatchrow i{width:56px; height:56px}
   .kq-pthead{font-size:40px}
 }
 
@@ -618,6 +641,8 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   #screen-choice .kq-qname{max-width:120px}
   #screen-choice .kq-qend{font-size:15px}
   .kq-breathhead,.kq-findhead{font-size:38px}
+  .kq-swatchrow{gap:22px}
+  .kq-swatchrow i{width:64px; height:64px; border-width:4px}
   .kq-pthead{font-size:46px}
 }
 
