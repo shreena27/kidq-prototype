@@ -318,7 +318,13 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-swatchrow{display:flex; gap:16px; justify-content:center; margin-top:4px}
 .kq-swatchrow i{width:48px; height:48px; border-radius:50%;
   background:var(--find-colour,var(--sun-deep));
-  border:3px solid rgba(46,42,36,.14);
+  /* Solid ink ring, not a tint. All four game colours sit under the 3:1 that
+     WCAG 1.4.11 asks of non-text UI against the cream sky - yellow is 1.43:1,
+     and even the strongest, red, only reaches 2.86:1. Darkening the fills was
+     the other option and it is worse: a "red thing" has to look red. The ring
+     carries the boundary instead, at 5.34:1, and matches the ink linework
+     already used on the sun and moon faces. */
+  border:3px solid var(--ink-soft);
   opacity:0; transform:scale(.5);
   animation:kq-swatchin .45s cubic-bezier(.34,1.56,.64,1) forwards}
 .kq-swatchrow i:nth-child(2){animation-delay:.1s}
