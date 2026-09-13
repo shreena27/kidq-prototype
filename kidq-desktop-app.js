@@ -21,14 +21,19 @@
       // autoplay never gets a chance to show itself.
       aarav: {
         totalMinutes: 30,
+        // One family account, so attribution is a household label on the session,
+        // not a field on each video. Onboarding stores a single parent name per
+        // family with no notion of who added a given item, so a per-video picker
+        // would be inventing data the API cannot back.
+        pickedBy: "Mumma & Papa",
         videos: [
-          { id: "v1", title: "The Bunny Wakes Up", minutes: 8, pickedBy: "Mumma",
+          { id: "v1", title: "The Bunny Wakes Up", minutes: 8,
             src: "proposal-src/clip-b.mp4", poster: "proposal-src/thumb-b.jpg" },
-          { id: "v2", title: "Butterfly in the Meadow", minutes: 7, pickedBy: "Papa",
+          { id: "v2", title: "Butterfly in the Meadow", minutes: 7,
             src: "proposal-src/clip-a.mp4", poster: "proposal-src/thumb-a.jpg" },
-          { id: "v3", title: "A Nap in the Sunshine", minutes: 8, pickedBy: "Mumma",
+          { id: "v3", title: "A Nap in the Sunshine", minutes: 8,
             src: "proposal-src/clip-a.mp4", poster: "proposal-src/thumb-a.jpg" },
-          { id: "v4", title: "Bunny's Big Adventure", minutes: 7, pickedBy: "Mumma & Papa",
+          { id: "v4", title: "Bunny's Big Adventure", minutes: 7,
             src: "proposal-src/clip-b.mp4", poster: "proposal-src/thumb-b.jpg" }
         ]
       },
@@ -39,10 +44,11 @@
       meera: {
         totalMinutes: 17,
         replay: true,
+        pickedBy: "Mumma & Papa",
         videos: [
-          { id: "y1", title: "The Bunny Wakes Up", minutes: 8, pickedBy: "Mumma",
+          { id: "y1", title: "The Bunny Wakes Up", minutes: 8,
             src: "proposal-src/clip-b.mp4", poster: "proposal-src/thumb-b.jpg" },
-          { id: "y2", title: "Butterfly in the Meadow", minutes: 9, pickedBy: "Papa",
+          { id: "y2", title: "Butterfly in the Meadow", minutes: 9,
             src: "proposal-src/clip-a.mp4", poster: "proposal-src/thumb-a.jpg" }
         ]
       }
@@ -51,7 +57,7 @@
     whatsNext: [
       { label: "Play outside", scene: "kite", picked: false },
       { label: "Homework", scene: "book", picked: false },
-      { label: "Sleep time", scene: "moon", picked: true, pickedBy: "Papa" }
+      { label: "Sleep time", scene: "moon", picked: true, pickedBy: "Mumma & Papa" }
     ]
   };
   /* ===================== end backend integration point ================= */
@@ -190,11 +196,10 @@
     return !!state.session;
   }
 
-  function pickerSummary(videos) {
-    const names = [...new Set(videos.map((v) => v.pickedBy))];
-    if (names.length === 1) return names[0];
-    return "Mumma & Papa";
-  }
+  // The household label for whoever picked the session. One family account, so
+  // it is the same everywhere it appears rather than varying per video.
+  const pickerName = () => (state.session && state.session.pickedBy) || "Mumma & Papa";
+  const pickerNameHtml = () => pickerName().replace(/&/g, "&amp;");
   const totalVideos = () => state.session.videos.length;
   const unwatched = () => state.session.videos.filter((v) => !state.watched.has(v.id));
   // the sun moves on the parents' allotted time: each video contributes its
@@ -272,7 +277,7 @@
     const s = state.session;
     $("#sunrise-heartline").innerHTML = s.replay
       ? `<b>Yesterday's videos, one more time</b> · ${s.totalMinutes} min`
-      : `<b>${pickerSummary(s.videos)} picked ${s.videos.length} videos</b> · ${s.totalMinutes} min`;
+      : `<b>${pickerNameHtml()} picked ${s.videos.length} videos</b> · ${s.totalMinutes} min`;
     showScreen("screen-sunrise");
     markDemo("sunrise");
   }
@@ -293,7 +298,7 @@
   // watched dimmed, and every card tappable to switch
   function renderStrip() {
     $("#watch-strip-label").textContent = state.session.replay
-      ? "Yesterday's picks" : `${pickerSummary(state.session.videos)}'s picks`;
+      ? "Yesterday's picks" : `${pickerName()}'s picks`;
     const row = $("#watch-queue");
     row.innerHTML = "";
     state.session.videos.forEach((v) => {
@@ -338,7 +343,7 @@
     $("#watch-name").textContent = `${state.profile.name}'s watch time`;
     $("#watch-count").textContent = `video ${state.session.videos.indexOf(videoObj) + 1} of ${totalVideos()}`;
     $("#watch-title").textContent = videoObj.title;
-    $("#watch-picker").innerHTML = `<b>Picked by ${videoObj.pickedBy.replace("&", "&amp;")}</b> · ${videoObj.minutes} min`;
+    $("#watch-picker").innerHTML = `<b>Picked by ${pickerNameHtml()}</b> · ${videoObj.minutes} min`;
     renderStrip();
     video.src = videoObj.src;
     video.poster = videoObj.poster;
