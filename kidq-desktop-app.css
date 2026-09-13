@@ -318,15 +318,20 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-swatchrow{display:flex; gap:16px; justify-content:center; margin-top:4px}
 .kq-swatchrow i{width:48px; height:48px; border-radius:50%;
   background:var(--find-colour,var(--sun-deep));
-  /* Solid ink ring, not a tint. All four game colours sit under the 3:1 that
-     WCAG 1.4.11 asks of non-text UI against the cream sky - yellow is 1.43:1,
-     and even the strongest, red, only reaches 2.86:1. Darkening the fills was
-     the other option and it is worse: a "red thing" has to look red. The ring
-     carries the boundary instead, at 5.34:1, and matches the ink linework
-     already used on the sun and moon faces. */
-  border:3px solid var(--ink-soft);
-  opacity:0; transform:scale(.5);
-  animation:kq-swatchin .45s cubic-bezier(.34,1.56,.64,1) forwards}
+  /* Same translucent tint every other day surface uses (.kq-qcard, brand.md §5).
+     An earlier solid ink ring here was a mistake twice over: it imported a
+     device this illustration language does not have - no disc in the app is
+     outlined, and the sun and moon use ink strokes *inside* the disc - and it
+     answered a rule that does not bind. These swatches are aria-hidden and
+     non-interactive, so they are a graphical object, and WCAG 1.4.11 exempts
+     graphics whose particular presentation is essential to the information.
+     A swatch whose whole content is its colour is that exception. Size, not a
+     ring, is what actually helps a child here. */
+  border:2px solid rgba(46,42,36,.1);
+  opacity:0; transform:translateY(6px);
+  /* brand.md §4: default 400-600ms ease-out, no bounce. Springy moments are
+     earned (sun tap, high five, celebration); arriving at a screen is not. */
+  animation:kq-swatchin .5s ease-out forwards}
 .kq-swatchrow i:nth-child(2){animation-delay:.1s}
 .kq-swatchrow i:nth-child(3){animation-delay:.2s}
 @keyframes kq-swatchin{to{opacity:1; transform:none}}
@@ -648,7 +653,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   #screen-choice .kq-qend{font-size:15px}
   .kq-breathhead,.kq-findhead{font-size:38px}
   .kq-swatchrow{gap:22px}
-  .kq-swatchrow i{width:64px; height:64px; border-width:4px}
+  .kq-swatchrow i{width:64px; height:64px}
   .kq-pthead{font-size:46px}
 }
 

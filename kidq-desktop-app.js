@@ -436,11 +436,16 @@
      verify anything: one honest "I found them!" tap brings them back. No timer,
      no countdown — the child sets the pace.                                  */
   const findScreen = $("#screen-find");
+  // No yellow. The sun on this screen is #FFC64D and the sun is also the "I found
+  // them" button, so "find 3 yellow things" is answered by the screen itself - a
+  // child can point at the sun and tap it in a second. This is the one break whose
+  // whole point is to send them away from the screen.
+  // Red is #C2543F, not the coral heart token: coral doesn't read as red to a
+  // 2-4 year old learning colours, and this red clears 3:1 on the sky unaided.
   const FIND_COLOURS = [
-    { name: "red",    hex: "#E2705E" },
-    { name: "blue",   hex: "#6FA8DC" },
-    { name: "yellow", hex: "#FFC64D" },
-    { name: "green",  hex: "#5FA88A" }
+    { name: "red",   hex: "#C2543F" },
+    { name: "blue",  hex: "#6FA8DC" },
+    { name: "green", hex: "#5FA88A" }
   ];
   let findRotation = Math.floor(Math.random() * FIND_COLOURS.length);
   function startFind() {
@@ -448,8 +453,9 @@
     findRotation += 1;
     findScreen.classList.remove("celebrate");
     findScreen.style.setProperty("--find-colour", c.hex);
+    // the fill comes from --find-colour alone; setting it inline as well made the
+    // CSS custom-property fallback dead code
     $$("#find-swatches i").forEach((s) => {
-      s.style.background = c.hex;
       // restart the staggered entrance: the elements persist between breaks, so
       // without a reflow the animation only ever plays on the first one
       s.style.animation = "none";
