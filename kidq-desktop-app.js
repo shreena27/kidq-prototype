@@ -70,8 +70,46 @@
   const safePlay = (m) => { if (!m) return; m.currentTime = 0; m.play().catch(() => {}); };
   const attemptPlay = (m) => { m.play().catch(() => { later(() => m.play().catch(() => {}), 200); }); };
 
+  /* ---------- spoken instructions ----------
+     A child aged 0-6 cannot read "Find 3 red things!". On that break the colour
+     swatches carry the instruction visually, which leaves a child who is also
+     low-vision or colour-blind with no instruction at all, so the breaks say
+     their instruction out loud.
+
+     speechSynthesis is a prototype stand-in, not the shipping answer: device
+     voices vary wildly in warmth and accent, and this brand is deliberately
+     calm. A real build should use recorded voice in Indian English. Speech is
+     an enhancement throughout - if it is unavailable or blocked, every break
+     still works exactly as before. */
+  const speech = window.speechSynthesis || null;
+  let voicePick = null;
+  function pickVoice() {
+    if (!speech) return null;
+    const vs = speech.getVoices() || [];
+    return vs.find((v) => v.lang === "en-IN")
+        || vs.find((v) => v.lang && v.lang.startsWith("en"))
+        || vs[0] || null;
+  }
+  if (speech && "onvoiceschanged" in speech) {
+    speech.onvoiceschanged = () => { voicePick = pickVoice(); };
+  }
+  function say(text) {
+    if (!speech) return;
+    try {
+      speech.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      voicePick = voicePick || pickVoice();
+      if (voicePick) u.voice = voicePick;
+      u.rate = 0.9;   // unhurried, to match the pace of everything else here
+      u.pitch = 1.05; // a touch warm, well short of chirpy
+      speech.speak(u);
+    } catch (e) { /* never let a missing voice break a break */ }
+  }
+  function hush() { try { if (speech) speech.cancel(); } catch (e) {} }
+
   function showScreen(id) {
     clearTimers();
+    hush(); // a line must never carry over into the next screen
     $$(".screen").forEach((s) => s.classList.toggle("active", s.id === id));
     $$("[data-demo]").forEach((b) => b.classList.remove("selected"));
   }
@@ -396,6 +434,10 @@
 
   function startBreathing() {
     showScreen("screen-breathing");
+    // Only the opening line is spoken. The sun's own swell and shrink is the
+    // guide from there, and narrating all six half-breaths would talk over the
+    // quiet this break exists to create.
+    later(() => say("Three big slow breaths with the sun."), 600);
     initBreathe();
     breathing.classList.remove("ph-in", "ph-out", "celebrate");
     breathDots.forEach((d) => d.classList.remove("on"));
@@ -425,6 +467,7 @@
       breathing.classList.remove("ph-out");
       breathing.classList.add("celebrate");
       breathHeadline.textContent = "You did it! ✨";
+      say("You did it!");
       if (brAnim) brAnim.goToAndStop(BR_END, true);
       later(startChoice, 1900);
     }
@@ -464,16 +507,19 @@
     });
     $("#find-headline").textContent = `Find 3 ${c.name} things!`;
     $("#find-sub").textContent = "Look around the room. Tap the sun when you find them.";
+    // said after showScreen below, so the screen is up before the voice starts
     // the sun is the control, so it is disabled rather than hidden - hiding it
     // would remove the mascot from the celebration
     $("#find-done").disabled = false;
     showScreen("screen-find");
+    later(() => say(`Find 3 ${c.name} things. Look around the room, and tap the sun when you find them.`), 600);
   }
   $("#find-done").addEventListener("click", (e) => {
     if (findScreen.classList.contains("celebrate")) return;
     findScreen.classList.add("celebrate");
     $("#find-headline").textContent = "You found them! ✨";
     $("#find-sub").textContent = "Great looking.";
+    say("You found them!"); // kept short: the next screen arrives in 1.9s and hushes
     $("#find-done").disabled = true;
     pop(e.currentTarget);
     safePlay(chime);
