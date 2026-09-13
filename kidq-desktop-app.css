@@ -1,0 +1,614 @@
+/* KidQ desktop working prototype — one responsive system (container queries on #app).
+   Visual language ported from kidq-desktop-mockups-v1.html (locked) + working-prototype. */
+
+:root{
+  --cream:#FAF4E8; --cream-deep:#F2E9D8; --ink:#2E2A24; --ink-soft:#6B6459;
+  --teal:#1F7A6D; --teal-deep:#16594F; --teal-on-dark:#7FD8C8;
+  --sun:#FFC64D; --sun-deep:#F0A72E; --dusk:#C9B8E8; --night:#2B2955; --night-deep:#211F45;
+  --heart:#E2705E;
+  --disp:'Baloo 2','Trebuchet MS',system-ui,sans-serif;
+  --body:'Mukta','Segoe UI',system-ui,sans-serif;
+}
+*{box-sizing:border-box; margin:0}
+html,body{height:100%}
+body{background:var(--ink); font-family:var(--body); color:var(--ink); overflow:hidden}
+button{font-family:inherit; -webkit-tap-highlight-color:transparent}
+
+#app{position:fixed; inset:0; background:var(--cream); overflow:hidden; container-type:inline-size}
+
+.screen{position:absolute; inset:0; overflow:hidden; opacity:0; visibility:hidden;
+  transition:opacity .5s ease-out, visibility 0s linear .5s}
+.screen.active{opacity:1; visibility:visible; transition-delay:0s}
+.screen.paused .kq-anim, .screen.paused .kq-cloud, .screen.paused .rays line,
+.screen.paused .kq-mheart, .screen.paused .kq-eq i, .screen.paused .halo{animation-play-state:paused}
+
+/* ---------- shared keyframes ---------- */
+@keyframes kq-twinkle{50%{opacity:.25}}
+@keyframes kq-halopulse{0%,100%{transform:scale(1); opacity:.85}50%{transform:scale(1.08); opacity:1}}
+@keyframes kq-mbeat{0%,100%{transform:scale(1)}12%{transform:scale(1.3)}24%{transform:scale(1)}}
+@keyframes kq-mfloat{0%,100%{transform:translateY(0)}42%{transform:translateY(-8px)}
+  66%{transform:translateY(0)}78%{transform:translateY(-15px)}86%{transform:translateY(2px)}
+  92%{transform:translateY(0)}}
+@keyframes kq-moonsway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes kq-zfloat{0%{opacity:0; transform:translate(0,0) scale(.8)}22%{opacity:1}
+  100%{opacity:0; transform:translate(16px,-40px) scale(1.2)}}
+@keyframes kq-snooze{0%,100%{transform:scale(1)}50%{transform:scale(1.035) rotate(1.2deg)}}
+@keyframes kq-drift{from{transform:translateX(-120px)}to{transform:translateX(110cqw)}}
+@keyframes pop{0%{transform:scale(1)}30%{transform:scale(1.22,.82)}55%{transform:scale(.92,1.14)}
+  75%{transform:scale(1.06,.96)}100%{transform:scale(1)}}
+@keyframes ringout{0%{transform:scale(.7); opacity:.95}100%{transform:scale(2.1); opacity:0}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes rayripple{0%,100%{stroke-width:3.4; opacity:.75}50%{stroke-width:5; opacity:1}}
+@keyframes blink{0%,92%,100%{opacity:1}95%{opacity:.15}}
+@keyframes eqb{0%,100%{height:7px}50%{height:15px}}
+@keyframes hbreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+/* idle character blink — every sun face blinks now and then (alive, not busy) */
+.eye{transform-box:fill-box; transform-origin:center; animation:kq-eyeblink 5.6s ease-in-out infinite}
+@keyframes kq-eyeblink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.15)}}
+@keyframes stir{0%{transform:rotate(0)}25%{transform:rotate(-5deg)}50%{transform:rotate(4deg)}
+  72%{transform:rotate(-2deg)}100%{transform:rotate(0)}}
+@keyframes moonwob{0%{transform:rotate(0)}25%{transform:rotate(-8deg)}50%{transform:rotate(6deg)}
+  75%{transform:rotate(-3deg)}100%{transform:rotate(0)}}
+@keyframes flick{0%,100%{transform:scale(1) rotate(-2deg)}50%{transform:scale(1.1,1.26) rotate(2deg)}}
+@keyframes smokeup{0%{opacity:0; transform:translateY(0)}25%{opacity:.75}
+  100%{opacity:0; transform:translateY(-18px)}}
+
+/* ---------- skies ---------- */
+.kq-sky{position:absolute; inset:0; overflow:hidden;
+  background:linear-gradient(180deg,#FDF8EC 0%, #F7EBD2 58%, #F1E2C4 100%)}
+.kq-sky--predawn{background:linear-gradient(180deg,#3A3768 0%, #4E4482 58%, #8D7BB5 100%)}
+.kq-sky--night{background:linear-gradient(180deg,#3A3768 0%, #2B2955 52%, #211F45 100%)}
+.kq-sky--deepnight{background:linear-gradient(180deg,#2B2955 0%, #211F45 48%, #171530 100%)}
+.kq-sky--dawn{background:linear-gradient(180deg,#9F8CCB 0%, #C9B8E8 34%, #EDD9C4 50%, #F7CBA0 62%, #F3B583 100%)}
+.kq-morning{position:absolute; inset:0; opacity:0; transition:opacity 1.5s ease-out;
+  background:linear-gradient(180deg,#FDF8EC 0%, #F7EBD2 58%, #F1E2C4 100%)}
+.screen.risen .kq-morning{opacity:1}
+.kq-duskveil{position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity 1.4s ease;
+  background:linear-gradient(180deg,#9F8CCB 0%, #C9B8E8 40%, #F3B583 100%)}
+.screen.setting .kq-duskveil{opacity:.85}
+/* day-stage tints, driven from real session progress (coral dawn / radiant noon / orange ember) */
+.kq-dawnveil{position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .9s linear;
+  background:linear-gradient(180deg, rgba(249,213,182,.95) 0%, rgba(249,213,182,.8) 38%,
+  rgba(249,213,182,0) 72%)}
+.kq-emberveil{position:absolute; inset:0; opacity:0; pointer-events:none; transition:opacity .9s linear;
+  background:linear-gradient(180deg, rgba(244,199,149,.95) 0%, rgba(244,199,149,.8) 38%,
+  rgba(244,199,149,0) 72%)}
+
+.kq-star{position:absolute; width:4px; height:4px; border-radius:50%; background:#FAF4E8;
+  animation:kq-twinkle 3.4s ease-in-out infinite}
+.kq-cloud{position:absolute; opacity:.85; animation:kq-drift 60s linear infinite}
+.kq-cloud.c2{animation-duration:80s; animation-delay:-30s}
+
+/* ---------- shared bits ---------- */
+.kq-centercol{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:26px; padding:0 30px; text-align:center}
+.kq-mheart{width:17px; height:17px; flex-shrink:0; transform-origin:center;
+  animation:kq-mbeat 2.6s ease-in-out infinite}
+.halo{position:absolute; border-radius:50%; pointer-events:none}
+
+/* ---------- splash ---------- */
+#screen-splash{background:var(--cream); display:flex; align-items:center; justify-content:center; gap:4px}
+.balloon{position:relative; font-family:var(--disp); font-weight:800; font-size:clamp(66px,12cqw,120px);
+  line-height:1; display:inline-block; opacity:0; -webkit-background-clip:text; background-clip:text;
+  color:transparent; filter:drop-shadow(0 10px 14px rgba(46,42,36,.3))}
+#screen-splash.go .balloon{animation:inflate .95s cubic-bezier(.22,1,.36,1) both, bob2 3.4s ease-in-out 1.4s infinite}
+#screen-splash.go .b2{animation-delay:.12s, 1.55s}
+#screen-splash.go .b3{animation-delay:.24s, 1.7s}
+#screen-splash.go .b4{animation-delay:.36s, 1.85s}
+#screen-splash.off .balloon{animation:deflate .38s cubic-bezier(.4,0,.8,1) both}
+.b1{background-image:radial-gradient(circle at 32% 24%, #EFFFFA 0%, #9ADEC9 9%, #35A98F 36%, #1F7A6D 62%, #123F37 100%)}
+.b2{background-image:radial-gradient(circle at 32% 24%, #FFFBEA 0%, #FFE29A 9%, #FFC64D 40%, #F0A72E 66%, #8F5C12 100%)}
+.b3{background-image:radial-gradient(circle at 32% 24%, #FFF1EC 0%, #F5A897 9%, #E2705E 40%, #C2543F 66%, #6E2818 100%)}
+.b4{background-image:radial-gradient(circle at 32% 24%, #F6F1FF 0%, #C4B2EA 9%, #8E79C9 40%, #6F5AA8 66%, #382A66 100%)}
+@keyframes inflate{0%{opacity:0; transform:translateY(150px) scale(.2)}
+  55%{opacity:1; transform:translateY(-14px) scale(1.22,.8)}72%{transform:translateY(5px) scale(.88,1.14)}
+  86%{transform:translateY(-3px) scale(1.07,.94)}100%{opacity:1; transform:none}}
+@keyframes deflate{to{opacity:0; transform:translateY(34px) scale(1.25,.55)}}
+@keyframes bob2{50%{transform:translateY(-9px) scale(1.02,.98)}}
+.spark{position:absolute; top:42%; left:54%; width:6px; height:6px; border-radius:50%;
+  background:var(--sun); opacity:0}
+#screen-splash.go .spark{animation:spark-pop 1.5s ease-out .9s}
+@keyframes spark-pop{20%{opacity:1}100%{opacity:0; transform:translateY(-34px) scale(.5)}}
+
+/* ---------- login (who's watching) ---------- */
+.kq-whotitle{font-family:var(--disp); font-weight:800; font-size:34px; line-height:1.1;
+  color:var(--cream); text-wrap:balance}
+.kq-whorow{display:flex; gap:36px; justify-content:center}
+.kq-who{border:none; background:none; padding:0; cursor:pointer; display:flex;
+  flex-direction:column; align-items:center; gap:12px}
+.kq-who .facewrap{position:relative; width:116px; height:116px; display:block}
+.kq-who .halo{inset:-22px;
+  background:radial-gradient(circle, rgba(250,244,232,.28) 0%, rgba(250,244,232,0) 66%);
+  animation:kq-halopulse 4.5s ease-in-out infinite}
+.kq-who:nth-child(2) .halo{animation-delay:-2.2s}
+.kq-who svg{position:relative; width:100%; height:100%; display:block; transform-origin:center}
+.kq-who.tapped svg{animation:pop .55s ease-out}
+.kq-who .name{font-family:var(--disp); font-weight:700; font-size:19px; color:var(--cream)}
+.kq-who:focus-visible{outline:none}
+.kq-who:focus-visible .avdisc{stroke:var(--teal-on-dark); stroke-width:2.5}
+
+/* ---------- sunrise ---------- */
+.kq-greet{font-family:var(--disp); font-weight:800; font-size:40px; line-height:1.08;
+  color:var(--ink); text-wrap:balance; transition:opacity .9s ease-out}
+.screen.risen .kq-greet{opacity:.55}
+.kq-bigsun{position:relative; width:min(42cqw,190px); aspect-ratio:1; border:none; padding:0;
+  background:none; cursor:pointer; transition:transform 1.25s cubic-bezier(.3,.7,.3,1)}
+.kq-bigsun:focus-visible{outline:none}
+.kq-bigsun:focus-visible .disc{stroke:var(--teal-deep); stroke-width:2.5}
+.screen.risen .kq-bigsun{transform:translateY(-36vh) scale(.42)}
+.kq-bigsun .halo{inset:-34px;
+  background:radial-gradient(circle, rgba(255,198,77,.55) 0%, rgba(255,198,77,0) 68%);
+  animation:kq-halopulse 3s ease-in-out -1.5s infinite}
+.kq-bigsun .ring1{position:absolute; inset:8px; border-radius:50%; border:3px solid var(--sun);
+  opacity:0; pointer-events:none}
+.screen.tapped .kq-bigsun .ring1{animation:ringout .8s ease-out}
+.kq-bigsun svg{position:relative; width:100%; height:100%; display:block;
+  animation:breathe 3s ease-in-out infinite}
+.screen.tapped .kq-bigsun svg{animation:pop .55s ease-out}
+.screen.risen .kq-bigsun svg{animation:none}
+.kq-bigsun .rays line{stroke:var(--sun-deep); stroke-width:3.4; stroke-linecap:round;
+  animation:rayripple 2.6s ease-in-out infinite}
+.screen.risen .kq-bigsun .rays line{animation:none; stroke-width:4.6; opacity:1}
+.eyes-awake{opacity:0}
+.eyes-sleepy{animation:blink 5s ease-in-out infinite}
+.screen.risen .eyes-sleepy{opacity:0; animation:none}
+.screen.risen .eyes-awake{opacity:1}
+.kq-tapline{font-weight:600; font-size:19px; color:var(--ink)}
+.kq-tapline .alt{display:none; color:var(--teal-deep)}
+.screen.risen .kq-tapline .base{display:none}
+.screen.risen .kq-tapline .alt{display:inline}
+.kq-heartline{display:flex; align-items:center; justify-content:center; gap:9px; font-size:16.5px;
+  color:var(--ink); font-weight:500}
+.kq-heartline b{font-weight:700}
+
+/* ---------- watching (arc system) ---------- */
+.kq-arcwrap{position:absolute; left:0; right:0; top:70px; height:220px}
+.kq-arcwrap svg.arc{display:block; width:100%; height:100%}
+.kq-sun{position:absolute; width:64px; height:64px; pointer-events:none; transform:translate(-50%,-50%);
+  left:50%; top:40%}
+.kq-sun .halo{inset:-18px; background:radial-gradient(circle, rgba(255,198,77,.4), transparent 70%)}
+.kq-sun.kq-sunpick .halo{animation:kq-halopulse 3s ease-in-out infinite}
+.kq-sun svg{position:relative; width:100%; height:100%}
+.kq-sun .rays line{stroke:var(--sun-deep); stroke-width:3.4; stroke-linecap:round; opacity:.55}
+.kq-timeleft{position:absolute; right:20px; top:262px; font-weight:600; font-size:13px;
+  color:var(--ink-soft); background:rgba(250,244,232,.85); padding:3px 12px; border-radius:99px}
+.kq-head{position:absolute; top:24px; left:22px; display:flex; align-items:center; gap:11px}
+.kq-head .av{width:40px; height:40px; border-radius:50%; background:var(--teal); color:#fff;
+  font-family:var(--disp); font-weight:800; font-size:18px; display:flex; align-items:center;
+  justify-content:center; flex-shrink:0}
+.kq-head h4{font-family:var(--disp); font-weight:700; font-size:17px; color:var(--ink); line-height:1.15}
+.kq-head .sub{font-size:13px; color:var(--ink-soft); font-weight:500}
+.kq-content{position:static}
+.kq-player{position:absolute; left:20px; right:20px; top:310px; aspect-ratio:16/9;
+  border-radius:24px; overflow:hidden; box-shadow:0 12px 28px -16px rgba(46,42,36,.4);
+  background:linear-gradient(135deg,#D8C89C,#B9A574)}
+.kq-player video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+.kq-pause{position:absolute; right:14px; top:14px; width:44px; height:44px; border-radius:50%;
+  border:none; background:rgba(250,244,232,.92); color:var(--teal-deep); display:flex;
+  align-items:center; justify-content:center; cursor:pointer; z-index:2}
+.kq-pause:focus-visible{outline:3px solid var(--teal-deep); outline-offset:2px}
+.kq-pause .ic-play{display:none}
+.screen.paused .kq-pause .ic-pause{display:none}
+.screen.paused .kq-pause .ic-play{display:block}
+.kq-expand{position:absolute; right:66px; top:14px; width:44px; height:44px; border-radius:50%;
+  border:none; background:rgba(250,244,232,.92); color:var(--teal-deep); display:none;
+  align-items:center; justify-content:center; cursor:pointer; z-index:2}
+.kq-expand:focus-visible{outline:3px solid var(--teal-deep); outline-offset:2px}
+.kq-expand .ic-shrink{display:none}
+#screen-watching.wide .kq-expand .ic-grow{display:none}
+#screen-watching.wide .kq-expand .ic-shrink{display:block}
+.kq-stripcard{cursor:pointer; transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease}
+.kq-stripcard:hover:not(.now){transform:translateY(-3px)}
+.kq-stripcard:active:not(.now){transform:scale(.95)}
+.kq-stripcard:focus-visible{outline:3px solid var(--teal-deep); outline-offset:2px}
+.kq-stripcard.now{cursor:default; border:3px solid var(--sun);
+  box-shadow:0 0 0 5px rgba(255,198,77,.22), 0 8px 18px -10px rgba(46,42,36,.35)}
+.kq-stripcard.watched{opacity:.55}
+.kq-qname.nowlab{color:var(--teal-deep)}
+.kq-eq{position:absolute; left:16px; bottom:12px; display:flex; gap:3px; align-items:flex-end; height:16px}
+.kq-eq i{width:4px; height:8px; border-radius:2px; background:rgba(22,89,79,.85); display:block;
+  animation:eqb 1s ease-in-out infinite}
+.kq-eq i:nth-child(2){animation-delay:.2s}
+.kq-eq i:nth-child(3){animation-delay:.45s}
+.kq-daybar{position:absolute; left:20px; right:20px; top:530px; height:12px; border-radius:99px;
+  background:linear-gradient(90deg,#F7EBD2 0%,#FFC64D 34%,#C9B8E8 68%,#2B2955 100%)}
+.kq-daybar .veil{position:absolute; top:0; bottom:0; right:0; border-radius:0 99px 99px 0;
+  background:rgba(250,244,232,.78)}
+.kq-daybar .knob{position:absolute; top:50%; width:20px; height:20px; transform:translate(-50%,-50%);
+  border-radius:50%; background:var(--sun); border:3px solid #fff; box-shadow:0 2px 6px rgba(46,42,36,.3)}
+.kq-now{position:absolute; left:0; right:0; top:562px; text-align:center; padding:0 30px}
+.kq-now h4{font-family:var(--disp); font-weight:700; font-size:21px; color:var(--ink); line-height:1.2}
+.kq-now .sub{display:flex; justify-content:center; align-items:center; gap:8px; margin-top:6px;
+  font-size:14.5px; font-weight:500; color:var(--ink-soft)}
+.kq-now .sub b{font-weight:700; color:var(--ink)}
+.kq-quplabel{position:absolute; left:0; right:0; bottom:120px; text-align:center; font-size:13px;
+  font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft)}
+.kq-qrow{position:absolute; left:0; right:0; bottom:40px; display:flex; justify-content:center; gap:14px}
+.kq-qcard{width:124px; height:70px; border-radius:14px; overflow:hidden; border:2px solid rgba(46,42,36,.1);
+  background:linear-gradient(135deg,#D8C89C,#B9A574); padding:0}
+.kq-qcard img{display:block; width:100%; height:100%; object-fit:cover}
+.kq-qend{width:124px; height:70px; border-radius:14px; background:var(--night); border:2px dashed var(--dusk);
+  display:flex; align-items:center; justify-content:center; color:var(--cream); font-family:var(--disp);
+  font-weight:800; font-size:15px; flex-shrink:0}
+.kq-bigpause{position:absolute; left:50%; bottom:150px; width:76px; height:76px; margin-left:-38px;
+  border:none; border-radius:50%; background:var(--teal); color:#fff; display:flex; align-items:center;
+  justify-content:center; box-shadow:0 14px 26px -14px rgba(22,89,79,.55); cursor:pointer}
+.kq-bigpause .ic-play{display:none}
+.screen.paused .kq-bigpause .ic-pause{display:none}
+.screen.paused .kq-bigpause .ic-play{display:block}
+.kq-castpill{position:absolute; top:24px; left:50%; transform:translateX(-50%); display:flex;
+  align-items:center; gap:8px; background:rgba(255,255,255,.78); padding:9px 18px;
+  border-radius:99px; font-weight:600; font-size:14px; color:var(--teal-deep); white-space:nowrap}
+.kq-castpill .paused-txt{display:none}
+.screen.paused .kq-castpill .playing-txt{display:none}
+.screen.paused .kq-castpill .paused-txt{display:inline}
+
+/* ---------- playtime seam ---------- */
+.kq-ptpill{font-weight:700; font-size:14px; color:var(--ink); background:var(--sun);
+  padding:4px 16px; border-radius:99px}
+.kq-pthead{font-family:var(--disp); font-weight:800; font-size:34px; color:var(--ink)}
+
+/* ---------- breathing break ---------- */
+.kq-breathhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
+  color:var(--ink); text-wrap:balance; min-height:1.2em}
+.kq-breathrow{display:flex; align-items:center; justify-content:center; gap:clamp(18px,6cqw,90px)}
+.kq-bsunwrap{position:relative; width:min(40cqw,190px); aspect-ratio:1; flex-shrink:0}
+.kq-bsunwrap .halo{inset:-30px;
+  background:radial-gradient(circle, rgba(255,198,77,.45) 0%, rgba(255,198,77,0) 68%);
+  animation:kq-halopulse 3s ease-in-out -1.5s infinite}
+.kq-bsunwrap .ring1{position:absolute; inset:8px; border-radius:50%; border:3px solid var(--sun);
+  opacity:0; pointer-events:none}
+#screen-breathing.celebrate .ring1{animation:ringout .9s ease-out}
+.bsun{position:relative; width:100%; height:100%; display:block; transform:scale(.96);
+  transition:transform 3.2s ease-in-out}
+#screen-breathing.ph-in .bsun{transform:scale(1.16)}
+.bsun .rays line{stroke:var(--sun-deep); stroke-width:3.4; stroke-linecap:round;
+  animation:rayripple 2.6s ease-in-out infinite}
+.bsun .eyesClosed{opacity:0}
+#screen-breathing.ph-in .bsun .eyesClosed{opacity:1}
+#screen-breathing.ph-in .bsun .eyesOpen{opacity:0}
+.bsun .mouthO{opacity:0}
+#screen-breathing.ph-out .bsun .mouthO{opacity:1}
+#screen-breathing.ph-out .bsun .mouthSmile{opacity:0}
+.kq-prop{width:min(20cqw,86px); flex-shrink:0}
+.petalsB{transform-origin:43px 38px; transform:scale(.55); transition:transform 3s ease-in-out}
+#screen-breathing.ph-in .petalsB{transform:scale(1)}
+.flameB{transform-origin:43px 46px; animation:flick 1.3s ease-in-out infinite; transition:opacity .3s ease}
+#screen-breathing.ph-out .flameB{opacity:0; transition-delay:1.2s}
+.smokeB{opacity:0}
+#screen-breathing.ph-out .smokeB{animation:smokeup 1.6s ease-out 1.35s}
+.kq-breathsub{font-size:16.5px; font-weight:500; color:var(--ink-soft)}
+.kq-bdots{display:flex; gap:10px; justify-content:center}
+.kq-bdots i{width:12px; height:12px; border-radius:50%; background:rgba(46,42,36,.16);
+  transition:background .4s ease}
+.kq-bdots i.on{background:var(--sun-deep)}
+
+/* Lottie breathing character (sourced asset). The flower/candle SVG row above
+   is the offline fallback — .lottie-on swaps which one is shown. */
+.kq-breathelottie{display:none; width:min(88cqw,460px)}
+#screen-breathing.lottie-on .kq-breathelottie{display:block}
+#screen-breathing.lottie-on .kq-breathrow{display:none}
+
+/* ---------- find-a-colour break ---------- */
+.kq-findhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
+  color:var(--ink); text-wrap:balance; min-height:1.2em}
+.kq-findsub{font-size:16.5px; font-weight:500; color:var(--ink-soft)}
+.kq-swatchrow{display:flex; gap:12px; justify-content:center}
+.kq-swatchrow i{width:22px; height:22px; border-radius:50%;
+  background:var(--find-colour,var(--sun-deep)); opacity:.9}
+.kq-foundbtn{font-family:var(--disp); font-weight:800; font-size:19px; color:var(--cream);
+  background:var(--teal); border:none; padding:13px 30px; border-radius:99px; cursor:pointer;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1), background .2s ease}
+.kq-foundbtn:hover{background:var(--teal-deep); transform:translateY(-2px)}
+.kq-foundbtn:active{transform:scale(.95)}
+/* the sun wears the colour of the hunt */
+#screen-find .kq-bsunwrap .halo{background:radial-gradient(circle,
+  color-mix(in srgb, var(--find-colour,#FFC64D) 55%, transparent) 0%, transparent 70%)}
+#screen-find.celebrate .kq-findhead{animation:pop .7s cubic-bezier(.34,1.56,.64,1)}
+
+/* ---------- after-break choice ---------- */
+.kq-pickhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
+  color:var(--ink); text-wrap:balance}
+.kq-picksub{display:flex; align-items:center; justify-content:center; gap:9px; font-size:16px;
+  font-weight:500; color:var(--ink-soft)}
+.kq-pickwrap{display:flex; flex-direction:column; align-items:center; opacity:0;
+  transform:translateY(16px) scale(.94);
+  animation:kq-cardin .6s cubic-bezier(.34,1.56,.64,1) forwards}
+.kq-pickwrap:nth-child(2){animation-delay:.09s}
+.kq-pickwrap:nth-child(3){animation-delay:.18s}
+.kq-pickwrap:nth-child(4){animation-delay:.27s}
+@keyframes kq-cardin{to{opacity:1; transform:none}}
+.kq-qcard--pick{cursor:pointer; border:3px solid var(--sun);
+  box-shadow:0 0 0 6px rgba(255,198,77,.18), 0 10px 22px -12px rgba(46,42,36,.35);
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease}
+.kq-qcard--pick:hover{transform:translateY(-4px) scale(1.04);
+  box-shadow:0 0 0 6px rgba(255,198,77,.32), 0 16px 30px -14px rgba(46,42,36,.45)}
+.kq-qcard--pick:active{transform:scale(.95)}
+.kq-qcard--pick:focus-visible{outline:3px solid var(--teal-deep); outline-offset:3px}
+.kq-qname{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink);
+  text-align:center; margin-top:7px; max-width:124px; line-height:1.2;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+#screen-choice .kq-centercol{top:230px; justify-content:flex-start; gap:16px}
+#screen-choice .kq-qrow{position:static; gap:10px}
+#screen-choice .kq-qcard,#screen-choice .kq-qend{width:96px; height:54px; border-radius:12px}
+#screen-choice .kq-qname{max-width:96px}
+#screen-choice .kq-qend{font-size:13px}
+#screen-choice .kq-sunbtnwrap{position:absolute; inset:0; border:none; background:none; padding:0;
+  cursor:pointer}
+#screen-choice .kq-sunbtnwrap:focus-visible{outline:3px solid var(--teal-deep); outline-offset:-3px}
+
+/* ---------- all done ---------- */
+.kq-moontop{position:absolute; left:50%; top:56px; width:110px; height:110px; margin-left:-55px;
+  border:none; padding:0; background:none; cursor:pointer; animation:kq-mfloat 7s ease-in-out infinite}
+.kq-moonhalo{position:absolute; inset:-26px; border-radius:50%; pointer-events:none;
+  background:radial-gradient(circle, rgba(250,244,232,.34) 0%, rgba(250,244,232,0) 66%);
+  animation:kq-halopulse 4.5s ease-in-out -2s infinite}
+.kq-moon{position:relative; width:100%; height:100%; display:block; transform-origin:50% 90%;
+  animation:kq-moonsway 6.5s ease-in-out infinite; filter:drop-shadow(0 0 9px rgba(250,244,232,.5))}
+.moontap .kq-moon{animation:moonwob .85s ease-out}
+.kq-zz{position:absolute; font-family:var(--disp); font-weight:800; color:var(--dusk); opacity:0;
+  animation:kq-zfloat 3.6s ease-out infinite; pointer-events:none}
+.kq-donehead{font-family:var(--disp); font-weight:800; font-size:36px; line-height:1.12;
+  color:var(--cream); text-wrap:balance}
+.kq-donehead.gn{display:none}
+#screen-all-done.hifived .kq-donehead.base{display:none}
+#screen-all-done.hifived .kq-donehead.gn{display:block}
+.kq-hifive{position:relative; width:96px; height:96px; border:none; border-radius:50%;
+  background:var(--cream); line-height:1; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; box-shadow:0 16px 34px -16px rgba(0,0,0,.55);
+  animation:hbreathe 2.6s ease-in-out infinite}
+.kq-hifive:focus-visible{outline:3px solid var(--teal-on-dark); outline-offset:3px}
+.kq-hifive .hf-ring{position:absolute; inset:6px; border-radius:50%; border:3px solid var(--sun);
+  opacity:0; pointer-events:none}
+#screen-all-done.hifived .kq-hifive{animation:pop .55s ease-out}
+#screen-all-done.hifived .hf-ring{animation:ringout .8s ease-out}
+#screen-all-done.hifived .hf-ring2{animation:ringout .9s ease-out .14s}
+/* the hand asks for the five: a periodic lift-and-lean with a staggered
+   finger wiggle ("come on!"), then rests between asks */
+.hf-hand{width:60%; height:60%; display:block; transform-origin:50% 72%;
+  animation:hf-beckon 3.8s ease-in-out infinite}
+.hf-f,.hf-thumb{transform-box:fill-box; transform-origin:50% 88%}
+.hf-f{animation:hf-fwig 3.8s ease-in-out infinite}
+.hf-f2{animation-delay:.08s}
+.hf-f3{animation-delay:.16s}
+.hf-f4{animation-delay:.24s}
+@keyframes hf-beckon{0%,54%,90%,100%{transform:none}
+  62%{transform:translateY(-3px) rotate(-7deg)}
+  71%{transform:translateY(-1px) rotate(5deg)}
+  80%{transform:translateY(-3px) rotate(-2deg)}}
+@keyframes hf-fwig{0%,55%,88%,100%{transform:rotate(0)}
+  64%{transform:rotate(-11deg)}
+  74%{transform:rotate(5deg)}
+  82%{transform:rotate(-3deg)}}
+/* Lottie mode: "Hand clap 2" by Nicolas Binaghi (LottieFiles free license),
+   recolored to brand — dusk hand + sun-gold hand meet, dots float. The SVG
+   hands below stay as the offline fallback (shown only if lottie can't load). */
+.kq-hifive.lottie-on{background:none; box-shadow:none; width:170px; height:170px}
+.kq-hifive.lottie-on .hf-hand,.kq-hifive.lottie-on .hf-hand2,
+.kq-hifive.lottie-on .hf-ring,.kq-hifive.lottie-on .hf-burst{display:none}
+#hf-lottie{display:none}
+.kq-hifive.lottie-on #hf-lottie{display:block; position:absolute; inset:-12%; pointer-events:none}
+#hf-lottie svg{display:block}
+/* the five itself (after Vic Bell's 15Five shot, in brand language): a second
+   hand — the night's, in dusk lavender — swings up from the right and MEETS
+   ours; both squash on contact, gold burst lines mark the smack, then it
+   drops away and our hand rests */
+.hf-f1{--sp:-15deg}.hf-f2{--sp:-6deg}.hf-f3{--sp:6deg}.hf-f4{--sp:15deg}
+.hf-hand2{position:absolute; right:-10px; top:-16px; width:52%; height:52%;
+  opacity:0; transform-origin:50% 80%; pointer-events:none}
+.hf-burst{position:absolute; left:66%; top:-27px; width:60px; height:42px;
+  transform:translateX(-50%); opacity:0; pointer-events:none}
+#screen-all-done.hifived .hf-hand{animation:hf-clap .9s cubic-bezier(.34,1.56,.64,1)}
+#screen-all-done.hifived .hf-f{animation:hf-splay .9s cubic-bezier(.34,1.56,.64,1); animation-delay:0s}
+#screen-all-done.hifived .hf-hand2{animation:hf-meet .9s cubic-bezier(.34,1.56,.64,1)}
+#screen-all-done.hifived .hf-burst{animation:hf-burstout .55s ease-out .22s}
+@keyframes hf-clap{0%{transform:none}
+  20%{transform:translateX(-4px) rotate(-9deg)}
+  33%{transform:translateX(-1px) rotate(-4deg) scale(.9,.94)}
+  55%{transform:translateX(-6px) rotate(-7deg) scale(1.1)}
+  100%{transform:none}}
+@keyframes hf-splay{0%,100%{transform:rotate(0)}33%{transform:rotate(var(--sp))}}
+@keyframes hf-meet{0%{opacity:0; transform:translate(26px,50px) rotate(38deg)}
+  20%{opacity:1; transform:translate(4px,6px) rotate(-6deg)}
+  33%{transform:translate(0,0) rotate(-14deg) scale(.94)}
+  55%{transform:translate(10px,16px) rotate(4deg)}
+  82%{opacity:1}
+  100%{opacity:0; transform:translate(30px,54px) rotate(38deg)}}
+@keyframes hf-burstout{0%{opacity:0; transform:translateX(-50%) scale(.45)}
+  30%{opacity:1}
+  100%{opacity:0; transform:translateX(-50%) scale(1.3)}}
+/* the conversation line: the hand asks, then replies once you five it */
+.hf-say{font-family:var(--disp); font-weight:700; font-size:17px; color:var(--cream);
+  text-align:center; margin-top:-8px}
+.hf-say .ask{animation:kq-askpulse 3.8s ease-in-out infinite}
+.hf-say .reply{display:none}
+#screen-all-done.hifived .hf-say .ask{display:none}
+#screen-all-done.hifived .hf-say .reply{display:inline-block; animation:kq-sayin .45s cubic-bezier(.16,1,.3,1)}
+@keyframes kq-askpulse{0%,54%,100%{opacity:.78}70%{opacity:1}}
+@keyframes kq-sayin{0%{opacity:0; transform:translateY(6px)}100%{opacity:1; transform:none}}
+/* the moon answers the five: sleepy face opens into a grin */
+#screen-all-done .m-sleepy,#screen-all-done .m-awake{transition:opacity .25s ease}
+#screen-all-done .m-awake{opacity:0; transition-delay:.1s}
+#screen-all-done.hifived .m-sleepy{opacity:0; transition-delay:0s}
+#screen-all-done.hifived .m-awake{opacity:1}
+.kq-wn{opacity:0; transform:translateY(14px); transition:opacity .5s ease-out, transform .5s ease-out}
+.kq-wn.in{opacity:1; transform:none}
+.kq-wn .wn-label{font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--dusk); text-align:center; margin-bottom:14px}
+.wn-row{display:flex; gap:10px; justify-content:center}
+.wn-card{position:relative; background:var(--cream); border-radius:16px; padding:8px 8px 10px;
+  display:flex; flex-direction:column; align-items:center; gap:6px; width:104px; opacity:0;
+  transform:translateY(16px) scale(.94);
+  transition:opacity .5s ease-out, transform .55s cubic-bezier(.34,1.56,.64,1), box-shadow .6s ease}
+.wn-card:nth-child(2){transition-delay:.08s}
+.wn-card:nth-child(3){transition-delay:.16s}
+.kq-wn.in .wn-card{opacity:1; transform:none}
+.wn-card .scene{width:100%; height:52px; border-radius:11px; display:flex; align-items:center;
+  justify-content:center}
+.wn-card span{font-weight:600; font-size:12px; color:var(--ink); white-space:nowrap}
+.kq-wn.choose .wn-card:not(.wn-pick){opacity:.55}
+.kq-wn.choose .wn-pick{box-shadow:0 0 0 2px rgba(255,198,77,.5), 0 0 22px 4px rgba(255,198,77,.35),
+  0 10px 24px -14px rgba(0,0,0,.5); animation:kq-pickpop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes kq-pickpop{0%{transform:scale(1)}40%{transform:scale(1.07,.94)}
+  70%{transform:scale(.98,1.03)}100%{transform:scale(1)}}
+.wn-pick-heart{position:absolute; top:6px; right:6px; width:15px; height:15px; opacity:0;
+  transform:scale(.4); transition:opacity .4s ease .15s, transform .4s cubic-bezier(.34,1.56,.64,1) .15s}
+.kq-wn.choose .wn-pick .wn-pick-heart{opacity:1; transform:scale(1);
+  animation:kq-mbeat 2.6s ease-in-out .55s infinite}
+
+/* ---------- no session ---------- */
+.kq-moonside{position:absolute; right:44px; top:110px; width:94px; height:94px; border:none;
+  padding:0; background:none; cursor:pointer; animation:kq-mfloat 7s ease-in-out infinite}
+.kq-nsgreet{font-family:var(--disp); font-weight:800; font-size:36px; line-height:1.1;
+  color:var(--cream); text-wrap:balance}
+.kq-nsask{display:flex; align-items:center; justify-content:center; gap:9px; font-size:16px;
+  font-weight:500; color:var(--dusk)}
+.kq-sleepsun{position:relative; width:140px; height:140px; border:none; padding:0;
+  background:none; cursor:pointer}
+.kq-sleepsun .halo{inset:-26px;
+  background:radial-gradient(circle, rgba(255,198,77,.22) 0%, rgba(255,198,77,0) 66%);
+  animation:kq-halopulse 5s ease-in-out infinite}
+.kq-sleepsun svg{position:relative; width:100%; height:100%; display:block;
+  animation:kq-snooze 4.5s ease-in-out infinite; transform-origin:center}
+.kq-sleepsun.stir svg{animation:stir .9s ease-out}
+.kq-sleepsun .rays2 line{stroke:var(--sun-deep); stroke-width:3.4; stroke-linecap:round; opacity:.22}
+.kq-yesterday{display:flex; align-items:center; gap:10px; border:1.5px solid rgba(201,184,232,.5);
+  background:rgba(250,244,232,.08); color:var(--cream); font-family:var(--body); font-weight:600;
+  font-size:15px; padding:12px 22px; border-radius:99px; cursor:pointer;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1), background .2s ease}
+.kq-yesterday:hover{background:rgba(250,244,232,.16)}
+.kq-yesterday:active{transform:scale(.96)}
+
+/* ---------- night light ---------- */
+.kq-nlglow{position:absolute; inset:0; opacity:0; transition:opacity 1.2s ease; pointer-events:none;
+  background:radial-gradient(circle at 50% 52%, rgba(255,198,77,.26) 0%, rgba(255,198,77,.1) 36%,
+  rgba(255,198,77,0) 72%)}
+#screen-night-light.lit .kq-nlglow{opacity:1}
+.kq-nlmoon{position:relative; width:150px; height:150px; border:none; padding:0; background:none;
+  cursor:pointer; animation:kq-mfloat 7s ease-in-out infinite}
+.kq-nlmoon .halo3w{position:absolute; inset:-46px; border-radius:50%; pointer-events:none; opacity:0;
+  transition:opacity 1.2s ease;
+  background:radial-gradient(circle, rgba(255,198,77,.5) 0%, rgba(255,198,77,0) 68%)}
+#screen-night-light.lit .halo3w{opacity:1}
+.kq-nlhint{font-size:17px; font-weight:500; color:var(--dusk)}
+.kq-nlhint .lit-txt{display:none; color:var(--sun)}
+#screen-night-light.lit .kq-nlhint .off-txt{display:none}
+#screen-night-light.lit .kq-nlhint .lit-txt{display:inline}
+
+/* ---------- demo bar ---------- */
+.demo-bar{position:fixed; right:12px; bottom:12px; z-index:50; display:flex; gap:6px; flex-wrap:wrap;
+  justify-content:flex-end; max-width:min(94vw,620px); opacity:.5; transition:opacity .3s ease}
+.demo-bar:hover,.demo-bar:focus-within{opacity:1}
+.demo-bar button{border:1px solid rgba(46,42,36,.25); background:rgba(250,244,232,.9);
+  color:var(--ink); font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:99px;
+  cursor:pointer; backdrop-filter:blur(6px)}
+.demo-bar button.selected{background:var(--teal); border-color:var(--teal); color:#fff}
+.demo-credit{flex-basis:100%; text-align:right; font-size:10px; color:var(--ink); opacity:.75}
+
+/* base tier is a flex column too — real phone browsers vary in height,
+   and the 844px-fixed absolute layout collides below ~700px */
+.kq-arcwrap{top:40px; height:150px}
+.kq-timeleft{top:118px; right:20px}
+.kq-content{position:absolute; left:0; right:0; top:150px; bottom:0; display:flex;
+  flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:0 20px 12px;
+  --playerw:min(100%, max(300px, calc((100vh - 330px) * 16 / 9)))}
+.kq-player{position:relative; left:auto; right:auto; top:auto; width:100%; max-width:var(--playerw); flex-shrink:0}
+.kq-daybar{position:relative; left:auto; right:auto; top:auto; width:100%; max-width:var(--playerw);
+  height:10px; flex-shrink:0}
+.kq-now{position:static; padding:0}
+.kq-quplabel{position:static; bottom:auto}
+.kq-qrow{position:static; bottom:auto}
+.kq-bigpause{position:static; bottom:auto; margin-left:0}
+
+/* ---------- watching/cast layout: tablet tier ---------- */
+@container (min-width:601px){
+  .kq-head{top:18px; left:26px}
+  .kq-castpill{top:18px}
+  .kq-arcwrap{top:0; height:130px}
+  .kq-sun{width:70px; height:70px}
+  .kq-timeleft{top:82px; right:32px}
+  .kq-content{position:absolute; left:0; right:0; top:122px; bottom:0; display:flex;
+    flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:0 24px 14px}
+  .kq-now{position:static; padding:0}
+  .kq-now h4{font-size:17px}
+  .kq-now .sub{font-size:13px; margin-top:4px}
+  /* player scales with the window: as wide as fits the height budget, never edge-to-edge */
+  .kq-content{--playerw:min(84cqw, 760px, max(340px, calc((100vh - 337px) * 16 / 9)))}
+  .kq-player{position:relative; width:100%; max-width:var(--playerw); left:auto; right:auto; top:auto; flex-shrink:0}
+  .kq-daybar{position:relative; width:100%; max-width:var(--playerw); left:auto; right:auto; top:auto;
+    height:10px; flex-shrink:0}
+  .kq-quplabel{position:static; bottom:auto; margin-top:0; font-size:12px}
+  .kq-qrow{position:static; bottom:auto; margin-top:2px}
+  .kq-qcard,.kq-qend{width:104px; height:58px; border-radius:12px}
+  .kq-qname{max-width:104px}
+  .kq-bigpause{position:static; bottom:auto; margin-left:0}
+  .kq-expand{display:flex}
+  #screen-watching.wide .kq-arcwrap{height:110px}
+  #screen-watching.wide .kq-timeleft{top:64px}
+  #screen-watching.wide .kq-content{top:92px; gap:7px;
+    --playerw:min(94cqw, 1100px, max(340px, calc((100vh - 305px) * 16 / 9)))}
+  #screen-watching.wide .kq-qcard{width:84px; height:47px; border-radius:10px}
+  #screen-watching.wide .kq-qname{font-size:12px; margin-top:4px; max-width:84px}
+  #screen-watching.wide .kq-now h4{font-size:16px}
+  #screen-watching.wide .kq-now .sub{font-size:12.5px; margin-top:2px}
+  .kq-whotitle{font-size:38px}
+  .kq-who .facewrap{width:124px; height:124px}
+  .kq-nsgreet{font-size:38px}
+  .kq-moonside{top:90px; right:70px}
+  .kq-greet{font-size:46px}
+  #screen-choice .kq-centercol{top:160px; gap:14px}
+  .kq-pickhead{font-size:26px}
+  .kq-pthead{font-size:40px}
+}
+
+/* ---------- wide tier ---------- */
+@container (min-width:1100px){
+  .kq-head{top:26px; left:36px}
+  .kq-head .av{width:46px; height:46px; font-size:19px}
+  .kq-head h4{font-size:19px}
+  .kq-head .sub{font-size:14px}
+  .kq-castpill{top:26px; font-size:15px; padding:10px 20px}
+  .kq-arcwrap{height:150px}
+  .kq-sun{width:92px; height:92px}
+  .kq-timeleft{top:100px; right:48px; font-size:14px; padding:5px 16px}
+  .kq-content{top:148px; gap:11px; padding:0 30px 22px}
+  .kq-now h4{font-size:21px}
+  .kq-now .sub{font-size:14.5px; margin-top:6px}
+  .kq-content{--playerw:min(72cqw, 980px, max(440px, calc((100vh - 385px) * 16 / 9)))}
+  .kq-player{border-radius:24px}
+  .kq-daybar{height:12px}
+  .kq-quplabel{font-size:13px}
+  .kq-qrow{gap:14px}
+  .kq-qcard,.kq-qend{width:120px; height:68px; border-radius:14px}
+  .kq-qname{max-width:120px}
+  .kq-bigpause{width:84px; height:84px}
+  .kq-whotitle{font-size:46px}
+  .kq-whorow{gap:56px}
+  .kq-who .facewrap{width:150px; height:150px}
+  .kq-who .name{font-size:22px}
+  .kq-nsgreet{font-size:46px}
+  .kq-sleepsun{width:170px; height:170px}
+  .kq-moonside{top:110px; right:130px; width:110px; height:110px}
+  .kq-greet{font-size:52px}
+  .kq-donehead{font-size:44px}
+  .kq-hifive{width:110px; height:110px}
+  .hf-say{font-size:19px}
+  .wn-card{width:118px}
+  #screen-choice .kq-centercol{top:230px; gap:20px}
+  .kq-pickhead{font-size:38px}
+  #screen-choice .kq-qrow{gap:14px}
+  #screen-choice .kq-qcard,#screen-choice .kq-qend{width:120px; height:68px; border-radius:14px}
+  #screen-choice .kq-qname{max-width:120px}
+  #screen-choice .kq-qend{font-size:15px}
+  .kq-breathhead,.kq-findhead{font-size:38px}
+  .kq-pthead{font-size:46px}
+}
+
+/* ---------- reduced motion ---------- */
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after{
+  animation-duration:.001ms !important; animation-iteration-count:1 !important;
+  transition-duration:.12s !important}
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.12s !important}
+}
