@@ -76,11 +76,15 @@
      low-vision or colour-blind with no instruction at all, so the breaks say
      their instruction out loud.
 
-     speechSynthesis is a prototype stand-in, not the shipping answer: device
-     voices vary wildly in warmth and accent, and this brand is deliberately
-     calm. A real build should use recorded voice in Indian English. Speech is
-     an enhancement throughout - if it is unavailable or blocked, every break
-     still works exactly as before. */
+     speechSynthesis - the device's own voice - is the MVP choice: no assets to
+     record, no files to ship, and it speaks whatever copy the break happens to
+     carry, including a colour name chosen at runtime. The trade is that warmth
+     and accent vary by device and are outside our control, and some platforms
+     fetch voices from the network. Recorded voice in Indian English is the
+     post-MVP upgrade, not a blocker.
+
+     Speech is an enhancement throughout: if it is unavailable, blocked, or
+     throws, every break still works exactly as before. */
   const speech = window.speechSynthesis || null;
   let voicePick = null;
   function pickVoice() {
