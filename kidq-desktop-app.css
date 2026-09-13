@@ -183,6 +183,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   border-radius:24px; overflow:hidden; box-shadow:0 12px 28px -16px rgba(46,42,36,.4);
   background:linear-gradient(135deg,#D8C89C,#B9A574)}
 .kq-player video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+/* auto-advance: the player dips between the parent's picks so one video settles
+   before the next begins, instead of hard-cutting. Reduced motion shortens both
+   this transition and the JS timer that drives it. */
+.kq-player{transition:opacity .35s ease}
+#screen-watching.swapping .kq-player{opacity:.3}
 .kq-pause{position:absolute; right:14px; top:14px; width:44px; height:44px; border-radius:50%;
   border:none; background:rgba(250,244,232,.92); color:var(--teal-deep); display:flex;
   align-items:center; justify-content:center; cursor:pointer; z-index:2}
@@ -230,6 +235,15 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-qend{width:124px; height:70px; border-radius:14px; background:var(--night); border:2px dashed var(--dusk);
   display:flex; align-items:center; justify-content:center; color:var(--cream); font-family:var(--disp);
   font-weight:800; font-size:15px; flex-shrink:0}
+/* The session strip lists EVERY video the parent picked, so its width grows with
+   the session. Let the cards shrink to fit the frame instead of overflowing it:
+   the row is flex-centred, which hides overflow from scrollWidth checks, so it
+   fails silently and only a screenshot or a per-card bounds check catches it.
+   --stripcard is the card's preferred width and is re-set per tier below. */
+#watch-queue{--stripcard:124px; padding:0 14px; box-sizing:border-box}
+#watch-queue .kq-pickwrap{flex:0 1 var(--stripcard); min-width:0}
+#watch-queue .kq-qcard{width:100%; height:auto; aspect-ratio:16/9}
+#watch-queue .kq-qname{max-width:100%}
 .kq-bigpause{position:absolute; left:50%; bottom:150px; width:76px; height:76px; margin-left:-38px;
   border:none; border-radius:50%; background:var(--teal); color:#fff; display:flex; align-items:center;
   justify-content:center; box-shadow:0 14px 26px -14px rgba(22,89,79,.55); cursor:pointer}
@@ -541,6 +555,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-qrow{position:static; bottom:auto; margin-top:2px}
   .kq-qcard,.kq-qend{width:104px; height:58px; border-radius:12px}
   .kq-qname{max-width:104px}
+  #watch-queue{--stripcard:104px}
   .kq-bigpause{position:static; bottom:auto; margin-left:0}
   .kq-expand{display:flex}
   #screen-watching.wide .kq-arcwrap{height:110px}
@@ -549,6 +564,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
     --playerw:min(94cqw, 1100px, max(340px, calc((100vh - 305px) * 16 / 9)))}
   #screen-watching.wide .kq-qcard{width:84px; height:47px; border-radius:10px}
   #screen-watching.wide .kq-qname{font-size:12px; margin-top:4px; max-width:84px}
+  #screen-watching.wide #watch-queue{--stripcard:84px}
   #screen-watching.wide .kq-now h4{font-size:16px}
   #screen-watching.wide .kq-now .sub{font-size:12.5px; margin-top:2px}
   .kq-whotitle{font-size:38px}
@@ -581,6 +597,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-qrow{gap:14px}
   .kq-qcard,.kq-qend{width:120px; height:68px; border-radius:14px}
   .kq-qname{max-width:120px}
+  #watch-queue{--stripcard:120px}
   .kq-bigpause{width:84px; height:84px}
   .kq-whotitle{font-size:46px}
   .kq-whorow{gap:56px}

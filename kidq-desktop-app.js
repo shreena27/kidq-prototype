@@ -14,14 +14,21 @@
     ],
     // today's parent-picked session per profile; null = no session yet
     sessions: {
+      // 30 minutes with 2 breaks, as locked. Four videos rather than three so the
+      // breaks (which snap to the nearest video boundary at the 1/3 and 2/3 marks)
+      // land after videos 1 and 3 — leaving the 2 -> 3 gap unbroken, which is where
+      // autoplay is visible. With three equal videos every gap holds a break and
+      // autoplay never gets a chance to show itself.
       aarav: {
         totalMinutes: 30,
         videos: [
-          { id: "v1", title: "The Bunny Wakes Up", minutes: 10, pickedBy: "Mumma",
+          { id: "v1", title: "The Bunny Wakes Up", minutes: 8, pickedBy: "Mumma",
             src: "proposal-src/clip-b.mp4", poster: "proposal-src/thumb-b.jpg" },
-          { id: "v2", title: "Butterfly in the Meadow", minutes: 10, pickedBy: "Papa",
+          { id: "v2", title: "Butterfly in the Meadow", minutes: 7, pickedBy: "Papa",
             src: "proposal-src/clip-a.mp4", poster: "proposal-src/thumb-a.jpg" },
-          { id: "v3", title: "Bunny's Big Adventure", minutes: 10, pickedBy: "Mumma & Papa",
+          { id: "v3", title: "A Nap in the Sunshine", minutes: 8, pickedBy: "Mumma",
+            src: "proposal-src/clip-a.mp4", poster: "proposal-src/thumb-a.jpg" },
+          { id: "v4", title: "Bunny's Big Adventure", minutes: 7, pickedBy: "Mumma & Papa",
             src: "proposal-src/clip-b.mp4", poster: "proposal-src/thumb-b.jpg" }
         ]
       },
@@ -282,7 +289,7 @@
   function startWatching(videoObj) {
     state.current = videoObj;
     demoSkyP = null;
-    watching.classList.remove("paused", "setting");
+    watching.classList.remove("paused", "setting", "swapping");
     watchPause.setAttribute("aria-label", "Pause");
     $("#watch-av").textContent = state.profile.name[0];
     $("#watch-av").style.background = state.profile.color;
@@ -316,7 +323,7 @@
     renderStrip();
     if (unwatched().length === 0) startSunset();
     else if (breakIsDue()) startPlaytimeSeam();
-    else startChoice();
+    else autoAdvance();
   });
 
   // A break is due when the day has passed the next planned break point and the
@@ -324,6 +331,23 @@
   function breakIsDue() {
     if (state.breaksTaken >= state.breaks.length) return false;
     return sessionProgress() >= state.breaks[state.breaksTaken] - 0.001;
+  }
+
+  // The parent's picks play through on their own: one video rolls into the next
+  // after a short dip, with no tap. This is not feed autoplay - the list is
+  // finite, parent-chosen, and still ends at sunset.
+  //
+  // Breaks are the deliberate exception. Coming back from one always needs a tap
+  // (see startChoice), because a break exists to interrupt screen time, and
+  // sliding straight out of it into another video would undo that.
+  //
+  // No jingle here: the jingle marks a child's choice, and this isn't one. If the
+  // child taps a different card during the dip, their startWatching clears this
+  // pending timer via showScreen, so their pick wins.
+  function autoAdvance() {
+    const next = unwatched()[0];
+    watching.classList.add("swapping");
+    later(() => startWatching(next), 700);
   }
 
   $("#watch-expand").addEventListener("click", (e) => {

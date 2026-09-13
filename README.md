@@ -38,8 +38,13 @@ The full journey: splash → who's watching → sunrise → watching → playtim
 activity break → watching → sunset → all done → night-light. Standalone screens
 for the no-session state and cast mode are reachable from the demo bar.
 
-Two things worth looking for:
+Three things worth looking for:
 
+- **The parent's picks play through on their own.** One video rolls into the next
+  without a tap. This is not feed autoplay: the list is finite, the parent chose
+  it, and it still ends at sunset. Coming back from an activity break is the one
+  deliberate exception — that always needs a tap, because a break exists to
+  interrupt screen time and sliding straight out of it would undo that.
 - **Breaks land on time, not on video count.** A session gets exactly two breaks,
   at the one-third and two-thirds marks of the parent's allotted minutes, each
   snapping to the nearest video boundary so a break never interrupts a video.
