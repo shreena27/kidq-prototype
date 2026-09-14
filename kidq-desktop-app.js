@@ -72,6 +72,11 @@
   let timers = [];
   let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const later = (fn, ms) => { const id = setTimeout(fn, reducedMotion ? Math.min(ms, 200) : ms); timers.push(id); return id; };
+  // Phase timing for activity breaks. Unlike later(), this does NOT clamp under
+  // reduced motion: a 1.5s hold in a break is the activity itself, not a
+  // transition, and crushing it to 200ms would run the whole break in ~1.6s.
+  // Still pushed into `timers`, so clearTimers() and showScreen() cancel it.
+  const hold = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
   const safePlay = (m) => { if (!m) return; m.currentTime = 0; m.play().catch(() => {}); };
   const attemptPlay = (m) => { m.play().catch(() => { later(() => m.play().catch(() => {}), 200); }); };
@@ -115,7 +120,31 @@
       speech.speak(u);
     } catch (e) { /* never let a missing voice break a break */ }
   }
-  function hush() { try { if (speech) speech.cancel(); } catch (e) {} }
+  /* Recorded lines (spec 13.5): a bundled clip is the same warm voice on every
+     device - including TVs, whose web engines generally ship NO speechSynthesis
+     voice - so the recording is the primary and the device TTS the fallback,
+     not the other way around. Any failure falls back: missing file (play()
+     rejects), blocked autoplay, or a throw. Fallback fires once. */
+  let speakingClip = null;
+  function sayLine(clip, text) {
+    if (!clip) { say(text); return; }
+    let fellBack = false;
+    const fallBack = () => { if (!fellBack) { fellBack = true; say(text); } };
+    try {
+      clip.currentTime = 0;
+      speakingClip = clip;
+      const p = clip.play();
+      if (p && p.catch) p.catch(fallBack);
+    } catch (e) { fallBack(); }
+  }
+
+  function hush() {
+    try { if (speech) speech.cancel(); } catch (e) {}
+    if (speakingClip) {
+      try { speakingClip.pause(); speakingClip.currentTime = 0; } catch (e) {}
+      speakingClip = null;
+    }
+  }
 
   function showScreen(id) {
     clearTimers();
@@ -144,9 +173,9 @@
      day is winding down) — the same arc the sun itself travels.             */
   const BREAK_GAMES = {
     move:   ["find"],
-    settle: ["breathe"]
+    settle: ["breathe", "follow"]
     // next round: "tree" (stand like a tree) joins move;
-    //             "count" and "eyes" join settle
+    //             "count" joins settle
   };
 
   // Returns the two break points as fractions of the session's total minutes.
@@ -226,7 +255,20 @@
 
   /* ---------- sun-on-arc positioning (Q bezier of the arc svg) ---------- */
   function positionSun(el, p) {
-    const t = 0.06 + p * 0.88;
+    // History: t=0.06 overlapped the horizon line (since removed); a fix
+    // targeting the line alone (0.37/0.26) turned out to still overlap the
+    // video player's own top edge and had nearly flattened the sun's rise
+    // to midday; 0.25/0.50 fixed both against the wide tier's then-92px
+    // sun and 150px arc. Retuned again for the wide tier's shallower arc
+    // (150px->80px) and smaller sun (92px->44px, kidq-desktop-app.css
+    // #screen-watching.wide block) - matching KidQ's own deployed
+    // early-access build, which uses a shallow arc + small sun that barely
+    // competes with the player for height. 0.22/0.56 clears the smaller
+    // sun against the shorter arc with margin, keeps the p=0.5 midday peak
+    // exactly where it was (0.22 and 1-0.22 stay symmetric around 0.5,
+    // same as every version before this), and recovers most of the
+    // horizontal sweep (~53% of the sky's width, not ~28%).
+    const t = 0.22 + p * 0.56;
     const bx = (1 - t) * (1 - t) * 30 + 2 * (1 - t) * t * 500 + t * t * 970;
     const by = (1 - t) * (1 - t) * 215 + 2 * (1 - t) * t * 5 + t * t * 215;
     el.style.left = (bx / 1000 * 100) + "%";
@@ -375,7 +417,7 @@
     if (!watching.classList.contains("active")) return; // stray ended after a demo jump
     state.watched.add(state.current.id);
     renderStrip();
-    if (unwatched().length === 0) startSunset();
+    if (unwatched().length === 0) startSunset(false);
     else if (breakIsDue()) startPlaytimeSeam();
     else autoAdvance();
   });
@@ -391,9 +433,15 @@
   // after a short dip, with no tap. This is not feed autoplay - the list is
   // finite, parent-chosen, and still ends at sunset.
   //
-  // Breaks are the deliberate exception. Coming back from one always needs a tap
-  // (see startChoice), because a break exists to interrupt screen time, and
-  // sliding straight out of it into another video would undo that.
+  // Breaks are still the exception: the choice screen after a break (startChoice,
+  // below) waits indefinitely for a tap and does not advance on its own. Adding
+  // that too, after a pause, is DECIDED but NOT YET BUILT - see OPEN-ITEMS.md
+  // item 25 for the full reasoning; it lives unreconciled on the separate
+  // design/autoplay-item25 branch (commit 9836604), not in this file (final
+  // review I2). Until it lands, a child who does not realise it is their move
+  // is stranded on the choice screen, and on a cast TV the device that can tap
+  // may not even be in the room. A tap still wins once it lands: it picks the
+  // video, and picking a card picks a different one.
   //
   // No jingle here: the jingle marks a child's choice, and this isn't one. If the
   // child taps a different card during the dip, their startWatching clears this
@@ -417,19 +465,34 @@
   });
 
   /* ---------- sunset → all done ---------- */
-  function startSunset() {
+  // afterBreak: startChoice's empty-queue shortcut lands here immediately
+  // after a break's own ending (a chime for find/follow, a spoken line for
+  // breathing) - chiming again here restarted the same <audio> element mid-
+  // playback, or landed right on top of breathing's voice line (final review
+  // M6). The plain end-of-session path (video `ended` with nothing left) is
+  // the only place nothing has sounded yet, so it's the only path that chimes.
+  function startSunset(afterBreak) {
     watching.classList.add("setting");
-    safePlay(chime);
+    if (!afterBreak) safePlay(chime);
     later(startAllDone, 1500);
   }
 
   /* ---------- playtime seam + activity breaks ---------- */
+  // A ternary only ever reaches two games. Every new break must land here or it
+  // silently runs breathing.
+  const BREAK_START = { find: startFind, breathe: startBreathing, follow: startFollow };
+
   function startPlaytimeSeam(forceGame) {
     video.pause();
     showScreen("screen-playtime");
     const game = forceGame || gameForBreak(state.breaksTaken);
     if (!forceGame) state.breaksTaken += 1;
-    later(() => (game === "find" ? startFind() : startBreathing()), 1600);
+    // hold(), not later(): spec §9.2 wants this seam felt as a pause, not
+    // skipped, even under reduced motion. Deliberate, not a regression - it
+    // grew breathe/find's reduced-motion seam from later()'s 200ms cap to the
+    // full 1600ms (final review M8), called out here since nothing else in
+    // the diff said so.
+    hold(() => (BREAK_START[game] || startBreathing)(), 1600);
   }
 
   /* --- SETTLE: breathe with the sun (sourced Lottie character) --- */
@@ -499,12 +562,21 @@
   // them" button, so "find 3 yellow things" is answered by the screen itself - a
   // child can point at the sun and tap it in a second. This is the one break whose
   // whole point is to send them away from the screen.
-  // Red is #C2543F, not the coral heart token: coral doesn't read as red to a
-  // 2-4 year old learning colours, and this red clears 3:1 on the sky unaided.
+  // The set is tuned in OKLCH, not by eye. All three sit at L~58 and chroma
+  // 0.165, so no swatch reads as "the dark one" - the failure the old red had:
+  // at C=0.146 and hue 32 it was brick, not red, which a child is being asked
+  // to name out loud. Chroma stops short of the crayon primaries (0.19+), which
+  // clear contrast fine but go electric against this warm cream sky.
+  // Contrast is 3.02-4.24:1 across the day sky's three stops. A swatch is a
+  // graphical object, so 3:1 is not strictly required - but a child with low
+  // vision has to see this one to play, so the set is held to it.
+  // Green is a true green, not a second teal: teal is the UI accent and must
+  // not read as game content. No yellow - see the note above.
+  // Documented in brand.md section 2 as game content colours.
   const FIND_COLOURS = [
-    { name: "red",   hex: "#C2543F" },
-    { name: "blue",  hex: "#6FA8DC" },
-    { name: "green", hex: "#5FA88A" }
+    { name: "red",   hex: "#CC4C40" },
+    { name: "blue",  hex: "#217AD8" },
+    { name: "green", hex: "#049640" }
   ];
   let findRotation = Math.floor(Math.random() * FIND_COLOURS.length);
   function startFind() {
@@ -542,10 +614,240 @@
     later(startChoice, 1900);
   });
 
+  /* --- SETTLE: follow the sun with your eyes --- */
+  /* The clinical evidence for smooth pursuit is in DEGREES OF VISUAL ANGLE, so
+     the design holds degrees constant and lets pixels fall out. Holding pixels
+     constant cannot hold degrees constant: both pixel density and viewing
+     distance change per device.
+
+     near: CSS px per mm is roughly constant across phones and laptops, so one
+     number works (phone ~32, laptop ~40, so 36).
+     far:  a TV shell's viewport width is NOT fixed - 1280 and 960 are as common
+           as 1920 - but a set's angular width in the room is stable. A 43" at
+           ~2m subtends ~26.8 degrees. 2m, not 3m: small children sit closer than
+           adults do. */
+  const DEG_SUN = 2, DEG_PER_SEC = 8, NEAR_PX_PER_DEG = 36, TV_ANGULAR_WIDTH = 26.8;
+  const appEl = $("#app");
+
+  // data-context was never set anywhere, so pxPerDeg() always fell through to
+  // the near default (final review I4). Spec S3's `@media (hover:none) and
+  // (min-width:1100px)` can gate a stylesheet rule but not a dataset attribute
+  // a script reads - matchMedia is the same query, evaluated in JS, so it can
+  // actually flip the attribute. Re-checked on resize too: the query's own
+  // change event covers a TV browser's own resolution changes, but the
+  // existing resize listener is the belt-and-suspenders re-evaluation.
+  const farQuery = window.matchMedia("(hover: none) and (min-width: 1100px)");
+  function refreshContext() {
+    appEl.dataset.context = farQuery.matches ? "far" : "near";
+  }
+  refreshContext();
+  if (farQuery.addEventListener) farQuery.addEventListener("change", refreshContext);
+
+  function pxPerDeg() {
+    return appEl.dataset.context === "far"
+      ? appEl.clientWidth / TV_ANGULAR_WIDTH
+      : NEAR_PX_PER_DEG;
+  }
+
+  function applyContext() {
+    const ppd = pxPerDeg();
+    appEl.style.setProperty("--px-per-deg", ppd);
+    appEl.style.setProperty("--ball", (DEG_SUN * ppd) + "px");
+    return ppd;
+  }
+
+  const followField = $("#follow-field");
+  const followHero  = $("#follow-hero");
+  const followScreen = $("#screen-follow");
+  const MIN_PASS_MS = 1600; // a shorter pass reads as a flicker, not as a target
+
+  // Corner-to-corner is NOT good enough for the diagonal: its angle is then at
+  // the mercy of the field's aspect ratio, and on a wide desktop field the
+  // diagonal flattens to ~23 degrees off horizontal - close enough to the first
+  // leg that it stops being a third direction. Clamp the horizontal extent so
+  // the angle is at least 30 degrees, and centre what remains. Narrow fields are
+  // untouched, since their diagonal is already steeper than 30.
+  const MIN_DIAGONAL_DEG = 30;
+  function diagonalLeg(maxX, maxY) {
+    const dx = Math.min(maxX, maxY / Math.tan(MIN_DIAGONAL_DEG * Math.PI / 180));
+    const off = (maxX - dx) / 2;
+    return { from: {x: off, y: maxY}, to: {x: off + dx, y: 0} };
+  }
+
+  // Travel is the field's measured box minus one sun diameter, per axis.
+  function legGeometry(dir) {
+    const r = followField.getBoundingClientRect();
+    const d = followHero.getBoundingClientRect().width;
+    const maxX = Math.max(0, r.width  - d);
+    const maxY = Math.max(0, r.height - d);
+    const midX = maxX / 2, midY = maxY / 2;
+    const legs = {
+      across:   { from: {x: 0,    y: midY}, to: {x: maxX, y: midY} },
+      updown:   { from: {x: midX, y: 0   }, to: {x: midX, y: maxY} },
+      diagonal: diagonalLeg(maxX, maxY)
+    };
+    const leg = legs[dir];
+    leg.travel = Math.hypot(leg.to.x - leg.from.x, leg.to.y - leg.from.y);
+    return leg;
+  }
+
+  // Duration is derived so that ANGULAR speed is constant: a short leg takes
+  // proportionally less time than a long one. The floor stops a very short pass
+  // reading as a flicker; it binds on a phone's horizontal pass and nowhere on
+  // a television.
+  function passMs(travel) {
+    return Math.max(MIN_PASS_MS, (travel / (DEG_PER_SEC * pxPerDeg())) * 1000);
+  }
+
+  function placeHero(pt) {
+    followHero.style.translate = `${pt.x}px ${pt.y}px`;
+  }
+
+  function movePass(to, ms) {
+    followHero.style.setProperty("--sweep", ms + "ms");
+    placeHero(to);
+    return ms;
+  }
+
+  /* THE CATCH (spec 13.3). Interaction is an enhancement, exactly like speech:
+     a tap advances the game, and where no tap can come - a television - or none
+     does come, the sun pops on its own. hold(), not later(): the wait is the
+     activity's own pacing. The race between tap and timer is settled by onCatch
+     nulling itself first, so the loser finds nothing to run. */
+  const CATCH_WAIT_MS = 4500; // touch devices: never stuck
+  const FAR_CATCH_MS  = 2000; // TV: a beat - no tap is coming
+  let onCatch = null, catchTimer = 0;
+
+  function land(i, done) {
+    followHero.classList.add("landed");
+    followHero.setAttribute("aria-disabled", "false");
+    // Item 15's rule, wrapper/keyboard path: focus lands on the sun wherever
+    // the sun is the action. Enter/Space then fire the button's click.
+    followHero.focus({ preventScroll: true });
+    onCatch = () => {
+      onCatch = null;
+      clearTimeout(catchTimer);
+      followHero.classList.remove("landed");
+      followHero.setAttribute("aria-disabled", "true");
+      pop(followHero);
+      plip();
+      followDots[i]?.classList.add("on");
+      hold(done, 620); // let the pop land before the fade to the next leg
+    };
+    catchTimer = hold(() => { if (onCatch) onCatch(); },
+      appEl.dataset.context === "far" ? FAR_CATCH_MS : CATCH_WAIT_MS);
+  }
+  followHero.addEventListener("click", () => { if (onCatch) onCatch(); });
+
+  /* The catch sound: two quick soft sine notes, Web Audio, no asset. Enhancement
+     only - wrapped so a missing/blocked AudioContext costs nothing. The chime
+     stays celebration-only, matching find. */
+  let plipCtx = null;
+  function plip() {
+    try {
+      plipCtx = plipCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (plipCtx.state === "suspended") plipCtx.resume().catch(() => {});
+      const t = plipCtx.currentTime;
+      [659, 880].forEach((f, i) => {
+        const o = plipCtx.createOscillator(), g = plipCtx.createGain();
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + i * .09);
+        g.gain.exponentialRampToValueAtTime(.16, t + i * .09 + .02);
+        g.gain.exponentialRampToValueAtTime(.0001, t + i * .09 + .24);
+        o.connect(g); g.connect(plipCtx.destination);
+        o.start(t + i * .09); o.stop(t + i * .09 + .26);
+      });
+    } catch (e) { /* silence is fine */ }
+  }
+
+  const FOLLOW_LEGS = ["across", "updown", "diagonal"];
+  const followDots = $$("#follow-dots i");
+  const FADE_MS = 300, BEAT_MS = 400;
+
+  // The sun ends each leg where it began, so it must be repositioned for the
+  // next one. A jump cut reads as a glitch and breaks the pursuit; an untracked
+  // glide is a fourth direction the child will try to follow. So: fade out,
+  // reposition while invisible, fade in, beat.
+  function placeHidden(pt, then) {
+    followHero.classList.add("gone");
+    hold(() => {
+      // --sweep:0ms alone can't reach a zero transition duration under
+      // reduced motion: .reduce-motion * forces transition-duration:.12s
+      // !important on everything, which outranks the custom property and
+      // turned this "instant while hidden" reposition into a real, if brief,
+      // glide - visible as a semi-transparent slide because the opacity
+      // fade-in below starts concurrently (final review I3). .jump has two
+      // classes against .reduce-motion *'s one, so its own !important wins
+      // regardless of motion mode.
+      followHero.classList.add("jump");
+      placeHero(pt);
+      followHero.offsetWidth;            // commit the jump before fading back in
+      followHero.classList.remove("jump");
+      followHero.classList.remove("gone");
+      hold(then, FADE_MS + BEAT_MS);
+    }, FADE_MS);
+  }
+
+  function runLeg(i, done) {
+    const leg = legGeometry(FOLLOW_LEGS[i]);
+    const ms = passMs(leg.travel);
+    placeHidden(leg.from, () => {
+      movePass(leg.to, ms);
+      hold(() => {
+        movePass(leg.from, ms);
+        hold(() => land(i, done), ms);
+      }, ms);
+    });
+  }
+
+  function startFollow() {
+    applyContext();
+    followDots.forEach((d) => d.classList.remove("on"));
+    followHero.classList.remove("gone", "tapped");
+    followScreen.classList.remove("celebrate");
+    // A resize or motion-toggle restart can arrive mid-landing: clear the catch
+    // state so a stale onCatch can never fire against the new run.
+    onCatch = null;
+    followHero.classList.remove("landed");
+    followHero.setAttribute("aria-disabled", "true");
+    $("#follow-headline").innerHTML = '<span class="m-full">Follow the sun!</span><span class="m-reduced">Where\'s the sun?</span>';
+    showScreen("screen-follow");
+    hold(() => sayLine($("#voice-follow-intro"), "Follow the sun with your eyes. Catch it at the end!"), 600);
+    let i = 0;
+    const next = () => { i += 1; if (i < FOLLOW_LEGS.length) runLeg(i, next); else endFollow(); };
+    runLeg(0, next);
+  }
+
+  function endFollow() {
+    const r = followField.getBoundingClientRect();
+    const d = followHero.getBoundingClientRect().width;
+    placeHidden({ x: (r.width - d) / 2, y: (r.height - d) / 2 }, () => {
+      // .celebrate and .tapped's rules tie at CSS specificity (final review
+      // M1): if pop()'s own 950ms cleanup hadn't already removed .tapped by
+      // now, the later .celebrate rule wouldn't win, and the pop wouldn't
+      // (re)start. Removing it here makes that explicit instead of relying on
+      // timing that happened to work out.
+      followHero.classList.remove("tapped");
+      followScreen.classList.add("celebrate");
+      $("#follow-headline").innerHTML = '<span class="m-full">You did it! ✨</span><span class="m-reduced">You did it! ✨</span>';
+      sayLine($("#voice-follow-done"), "You did it!");
+      safePlay(chime);
+      // hold, not later: later would fire this at 200ms under reduced motion
+      // and cut the celebration off mid-word.
+      hold(startChoice, 1900);
+    });
+  }
+
   /* ---------- after-break choice (within the parent's picks) ---------- */
   const choiceScreen = $("#screen-choice");
   const choiceSun = $("#choice-sun");
   function startChoice() {
+    // No video left: the day is over, and the decided flow ends at the moon -
+    // sunset, then the all-done screen. A choice screen with nothing to choose
+    // would strand the child (its sun-tap would start undefined). The rule
+    // lives HERE, not in the callers, so no break - present or future - can
+    // reach a dead choice screen.
+    if (unwatched().length === 0) { startSunset(true); return; }
     const p = sessionProgress();
     positionSun(choiceSun, p);
     $("#choice-time").textContent = minutesLeft(p) + " min left";
@@ -689,7 +991,7 @@
     clearTimers();
     video.pause();
     if (!state.session) prepSession("aarav");
-    (b.dataset.break === "find" ? startFind : startBreathing)();
+    (BREAK_START[b.dataset.break] || startBreathing)();
   }));
 
   $$("[data-sky]").forEach((b) => b.addEventListener("click", () => {
@@ -707,6 +1009,15 @@
     document.documentElement.classList.toggle("reduce-motion", reducedMotion);
     e.currentTarget.setAttribute("aria-pressed", String(reducedMotion));
     e.currentTarget.textContent = reducedMotion ? "Motion reduced" : "Reduce motion";
+    // Never restart mid-ending: the break stays "active" through its own
+    // celebration AND through the silent hold startChoice/startSunset uses to
+    // reach the moon (neither calls showScreen), so a naive restart-if-active
+    // check would replay the whole break and, worse, cancel that pending
+    // transition, stranding the child on a follow screen that never moves on
+    // (final review I1).
+    if (followScreen.classList.contains("active") && !followScreen.classList.contains("celebrate")) {
+      clearTimers(); startFollow();
+    }
   });
   if (reducedMotion) {
     document.documentElement.classList.add("reduce-motion");
@@ -714,10 +1025,24 @@
     $("#motion-toggle").textContent = "Motion reduced";
   }
 
+  // Debounced so a window drag doesn't restart the break once per resize
+  // event (M7); the celebrate guard mirrors the motion-toggle handler above
+  // and is what actually stops the ending-replay bug (I1) - re-checked inside
+  // the timeout too, since the 150ms wait can outlast the celebration itself.
+  let followResizeTimer = 0;
   window.addEventListener("resize", () => {
+    refreshContext();
     if (watching.classList.contains("active") && state.session) updateSky();
     if (choiceScreen.classList.contains("active") && state.session) positionSun(choiceSun, sessionProgress());
     positionSun($("#cast-sun"), 0.5);
+    if (followScreen.classList.contains("active") && !followScreen.classList.contains("celebrate")) {
+      clearTimeout(followResizeTimer);
+      followResizeTimer = setTimeout(() => {
+        if (followScreen.classList.contains("active") && !followScreen.classList.contains("celebrate")) {
+          clearTimers(); startFollow();
+        }
+      }, 150);
+    }
   });
 
   startSplash();

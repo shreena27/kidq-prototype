@@ -87,10 +87,45 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .halo{position:absolute; border-radius:50%; pointer-events:none}
 
 /* ---------- splash ---------- */
-#screen-splash{background:var(--cream); display:flex; align-items:center; justify-content:center; gap:4px}
+#screen-splash{display:flex; align-items:center; justify-content:center; gap:4px}
 .balloon{position:relative; font-family:var(--disp); font-weight:800; font-size:clamp(66px,12cqw,120px);
   line-height:1; display:inline-block; opacity:0; -webkit-background-clip:text; background-clip:text;
   color:transparent; filter:drop-shadow(0 10px 14px rgba(46,42,36,.3))}
+.balloon-slot{position:relative; display:inline-flex; font-size:clamp(66px,12cqw,120px)}
+.seed{position:absolute; left:50%; top:50%; width:4px; height:4px; border-radius:50%;
+  background:#FAF4E8; opacity:0; transform:translate(-50%,-50%) scale(0)}
+#screen-splash .s1{opacity:1; transform:translate(-50%,-50%) scale(1)}
+/* The 68%/70% hold-end marks and the seed-twinkle delays (1.40/1.52/1.64/1.76s)
+   are hand-derived from .balloon's own .95s inflate + 0/.12/.24/.36s stagger
+   (kidq-desktop-app.css:124-127) - retuning either one silently breaks this
+   choreography. No .off rule exists for seeds by design (spec section 7):
+   they stay lit through the letters' deflate and vanish at the screen cut. */
+@keyframes seed-hold-left{
+  0%{transform:translate(-50%,-50%) scale(1) translate(0,0); animation-timing-function:ease-out}
+  68%{transform:translate(-50%,-50%) scale(1) translate(0,0)}
+  100%{transform:translate(-50%,-50%) scale(1) translate(-.55em,-.65em)}
+}
+@keyframes seed-in-left{
+  0%{opacity:0; transform:translate(-50%,-50%) scale(0); animation-timing-function:ease-out}
+  10%{opacity:1; transform:translate(-50%,-50%) scale(1); animation-timing-function:linear}
+  70%{opacity:1; transform:translate(-50%,-50%) scale(1); animation-timing-function:ease-out}
+  100%{opacity:1; transform:translate(-50%,-50%) scale(1) translate(-.55em,-.65em)}
+}
+@keyframes seed-in-right{
+  0%{opacity:0; transform:translate(-50%,-50%) scale(0); animation-timing-function:ease-out}
+  10%{opacity:1; transform:translate(-50%,-50%) scale(1); animation-timing-function:linear}
+  70%{opacity:1; transform:translate(-50%,-50%) scale(1); animation-timing-function:ease-out}
+  100%{opacity:1; transform:translate(-50%,-50%) scale(1) translate(.55em,-.65em)}
+}
+@keyframes seed-twinkle{0%,100%{opacity:1}50%{opacity:.25}}
+#screen-splash.go .s1{animation:seed-hold-left 1.40s ease-out 0s forwards,
+                                seed-twinkle 3.4s ease-in-out 1.40s infinite}
+#screen-splash.go .s2{animation:seed-in-left 1.52s ease-out 0s forwards,
+                                seed-twinkle 3.4s ease-in-out 1.52s infinite}
+#screen-splash.go .s3{animation:seed-in-right 1.52s ease-out .12s forwards,
+                                seed-twinkle 3.4s ease-in-out 1.64s infinite}
+#screen-splash.go .s4{animation:seed-in-right 1.52s ease-out .24s forwards,
+                                seed-twinkle 3.4s ease-in-out 1.76s infinite}
 #screen-splash.go .balloon{animation:inflate .95s cubic-bezier(.22,1,.36,1) both, bob2 3.4s ease-in-out 1.4s infinite}
 #screen-splash.go .b2{animation-delay:.12s, 1.55s}
 #screen-splash.go .b3{animation-delay:.24s, 1.7s}
@@ -105,10 +140,6 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   86%{transform:translateY(-3px) scale(1.07,.94)}100%{opacity:1; transform:none}}
 @keyframes deflate{to{opacity:0; transform:translateY(34px) scale(1.25,.55)}}
 @keyframes bob2{50%{transform:translateY(-9px) scale(1.02,.98)}}
-.spark{position:absolute; top:42%; left:54%; width:6px; height:6px; border-radius:50%;
-  background:var(--sun); opacity:0}
-#screen-splash.go .spark{animation:spark-pop 1.5s ease-out .9s}
-@keyframes spark-pop{20%{opacity:1}100%{opacity:0; transform:translateY(-34px) scale(.5)}}
 
 /* ---------- login (who's watching) ---------- */
 .kq-whotitle{font-family:var(--disp); font-weight:800; font-size:34px; line-height:1.1;
@@ -170,13 +201,17 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-sun.kq-sunpick .halo{animation:kq-halopulse 3s ease-in-out infinite}
 .kq-sun svg{position:relative; width:100%; height:100%}
 .kq-sun .rays line{stroke:var(--sun-deep); stroke-width:3.4; stroke-linecap:round; opacity:.55}
-.kq-timeleft{position:absolute; right:20px; top:262px; font-weight:600; font-size:13px;
+/* the status-pill slot: the time pill, and the Playtime pill on the two break
+   screens where it has no headline to sit above. Position is shared; each pill
+   keeps its own fill. */
+.kq-timeleft, .kq-ptpill.slot{position:absolute; right:20px; top:262px}
+.kq-timeleft{font-weight:600; font-size:13px;
   color:var(--ink-soft); background:rgba(250,244,232,.85); padding:3px 12px; border-radius:99px}
 .kq-head{position:absolute; top:24px; left:22px; display:flex; align-items:center; gap:11px}
 .kq-head .av{width:40px; height:40px; border-radius:50%; background:var(--teal); color:#fff;
   font-family:var(--disp); font-weight:800; font-size:18px; display:flex; align-items:center;
   justify-content:center; flex-shrink:0}
-.kq-head h4{font-family:var(--disp); font-weight:700; font-size:17px; color:var(--ink); line-height:1.15}
+.kq-head .name{font-family:var(--disp); font-weight:700; font-size:17px; color:var(--ink); line-height:1.15}
 .kq-head .sub{font-size:13px; color:var(--ink-soft); font-weight:500}
 .kq-content{position:static}
 .kq-player{position:absolute; left:20px; right:20px; top:310px; aspect-ratio:16/9;
@@ -222,7 +257,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-daybar .knob{position:absolute; top:50%; width:20px; height:20px; transform:translate(-50%,-50%);
   border-radius:50%; background:var(--sun); border:3px solid #fff; box-shadow:0 2px 6px rgba(46,42,36,.3)}
 .kq-now{position:absolute; left:0; right:0; top:562px; text-align:center; padding:0 30px}
-.kq-now h4{font-family:var(--disp); font-weight:700; font-size:21px; color:var(--ink); line-height:1.2}
+.kq-now .title{font-family:var(--disp); font-weight:700; font-size:21px; color:var(--ink); line-height:1.2}
 .kq-now .sub{display:flex; justify-content:center; align-items:center; gap:8px; margin-top:6px;
   font-size:14.5px; font-weight:500; color:var(--ink-soft)}
 .kq-now .sub b{font-weight:700; color:var(--ink)}
@@ -258,8 +293,8 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .screen.paused .kq-castpill .paused-txt{display:inline}
 
 /* ---------- playtime seam ---------- */
-.kq-ptpill{font-weight:700; font-size:14px; color:var(--ink); background:var(--sun);
-  padding:4px 16px; border-radius:99px}
+.kq-ptpill{font-weight:700; font-size:13px; color:var(--ink); background:var(--sun);
+  padding:3px 14px; border-radius:99px}
 .kq-pthead{font-family:var(--disp); font-weight:800; font-size:34px; color:var(--ink)}
 
 /* ---------- breathing break ---------- */
@@ -267,6 +302,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   color:var(--ink); text-wrap:balance; min-height:1.2em}
 .kq-breathrow{display:flex; align-items:center; justify-content:center; gap:clamp(18px,6cqw,90px)}
 .kq-bsunwrap{position:relative; width:min(40cqw,190px); aspect-ratio:1; flex-shrink:0}
+/* The seam's sun is deliberately smaller than the breathing one. This was an
+   inline style, with the same consequence as the find sun: the seam's headline
+   grew at the desktop tier and its sun could not follow. It has to sit after
+   .kq-bsunwrap to narrow it - same specificity, so order decides. */
+.kq-ptsun{width:min(34cqw,160px)}
 .kq-bsunwrap .halo{inset:-30px;
   background:radial-gradient(circle, rgba(255,198,77,.45) 0%, rgba(255,198,77,0) 68%);
   animation:kq-halopulse 3s ease-in-out -1.5s infinite}
@@ -304,9 +344,9 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 #screen-breathing.lottie-on .kq-breathrow{display:none}
 
 /* ---------- find-a-colour break ---------- */
-.kq-findhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
+.kq-findhead,.kq-followhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
   color:var(--ink); text-wrap:balance; min-height:1.2em}
-.kq-findsub{font-size:16.5px; font-weight:500; color:var(--ink-soft)}
+.kq-findsub,.kq-followsub{font-size:16.5px; font-weight:500; color:var(--ink-soft)}
 /* The colour the child is hunting for. For a pre-reader these swatches ARE the
    instruction - the headline names the colour in a word they may not read yet -
    so they are sized to be read at a glance, not as decoration.
@@ -338,7 +378,12 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 /* The sun itself is the "I found them" control, matching the sun-as-button used
    on sunrise and on the after-break choice screen. One tap target per screen,
    and it is the mascot the child is already looking at. */
-.kq-findsun{border:none; background:none; padding:0; cursor:pointer; display:block;
+/* Width lives here, not inline on the button. It was an inline style, which no
+   container query can override, so the sun stayed 132px at every size while the
+   headline and swatches around it grew - the one element on this screen that
+   never scaled, and it is also the button. */
+.kq-findsun{width:min(30cqw,132px);
+  border:none; background:none; padding:0; cursor:pointer; display:block;
   transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
 .kq-findsun:hover:not(:disabled){transform:translateY(-3px) scale(1.04)}
 .kq-findsun:active:not(:disabled){transform:scale(.94)}
@@ -351,6 +396,110 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 #screen-find .kq-bsunwrap .halo{background:radial-gradient(circle,
   color-mix(in srgb, var(--find-colour,#FFC64D) 55%, transparent) 0%, transparent 70%)}
 #screen-find.celebrate .kq-findhead{animation:pop .7s cubic-bezier(.34,1.56,.64,1)}
+
+/* ---------- SETTLE: follow the sun ---------- */
+/* The hero IS the sun - "the sun comes down to play" is the break concept, and
+   the tap target on every other screen. Contrast for pursuit is carried by the
+   RIM: the gold fill alone is ~1.9:1 against the pale sky, under the 3:1
+   moving-object floor. A pure ink ring measured 11.1:1 but read as a hard
+   black boundary on the gold disc (user call, 2026-09-14), so the rim is a
+   warm deep-amber mix instead - the sun's own shaded edge, not an outline
+   drawn on top of it - which still clears the floor at ~4.6:1 against the
+   lightest sky stop and ~3.5:1 against the darkest. box-sizing is border-box
+   (css:12), so the rim sits INSIDE the 2-degree diameter.
+   Positioning uses the `translate` PROPERTY, never `transform`: the catch pop
+   and the celebration animate `transform` (scale), and an animation on
+   transform clobbers a transform-based position - the exact defect Task 5's
+   review caught on the old celebration sun.
+   The halo is a glow, never a cast shadow: a shadow implies a floor, and this
+   sun is in the sky. */
+.kq-fsun{position:absolute; left:0; top:0; border-radius:50%;
+  width:var(--ball); height:var(--ball); padding:0; cursor:default;
+  display:flex; align-items:center; justify-content:center; gap:calc(var(--ball) * .15);
+  background:radial-gradient(circle at 32% 24%,
+    #FFE3A1 0%, #FFC64D 34%, #F5B03A 66%, #F0A72E 84%, #DB921F 100%);
+  border:max(2px, calc(var(--ball) * .07)) solid color-mix(in srgb, var(--sun-deep) 50%, var(--ink));
+  box-shadow:0 0 0 calc(var(--ball) * .10) color-mix(in srgb, var(--sun-deep) 16%, transparent),
+             0 0 calc(var(--ball) * .42) calc(var(--ball) * .10) color-mix(in srgb, var(--sun-deep) 20%, transparent);
+  transition:translate var(--sweep, 2s) ease-in-out, opacity .3s ease;
+  will-change:translate}
+.kq-fsun .eye{width:calc(var(--ball) * .12); height:calc(var(--ball) * .12);
+  border-radius:50%; background:var(--ink); margin-top:calc(var(--ball) * -.10)}
+/* the smile, the same arc every sun face wears - ink on gold now */
+.kq-fsun::after{content:""; position:absolute; left:50%; top:54%;
+  width:calc(var(--ball) * .38); height:calc(var(--ball) * .19);
+  transform:translateX(-50%);
+  border:0 solid var(--ink);
+  border-bottom-width:calc(var(--ball) * .06);
+  border-radius:0 0 50% 50% / 0 0 100% 100%}
+.kq-fsun.gone{opacity:0}
+/* Suppresses the translate transition while the sun repositions hidden
+   between legs - see the placeHidden() comment in the JS for why --sweep
+   alone isn't enough under reduced motion. Two classes beats .reduce-motion
+   *'s one class, so this !important wins in every motion mode; it's removed
+   again before opacity fades back in, so that transition is untouched. */
+.kq-fsun.jump{transition:none !important}
+/* Rays are a STATE, not a costume: display:none while gliding (a clean pursuit
+   target, and display - not opacity or visibility - so the oversize svg adds no
+   scrollable overflow to the field), out at landings and the celebration. */
+.kq-fsun .frays{display:none; position:absolute; inset:calc(var(--ball) * -.4);
+  pointer-events:none}
+.kq-fsun .frays line{stroke:var(--sun-deep); stroke-width:3.4; stroke-linecap:round}
+.kq-fsun.landed .frays, #screen-follow.celebrate .frays{display:block;
+  animation:raysin .3s ease-out}
+@keyframes raysin{0%{transform:scale(.55); opacity:0}100%{transform:scale(1); opacity:1}}
+/* the ring: base geometry here; ringout on celebrate is at css:502,
+   and Task 9 adds the landing pulse on the same span */
+#screen-follow .ring1{position:absolute; inset:-12%; border-radius:50%;
+  border:3px solid var(--sun); opacity:0; pointer-events:none}
+/* Landing: rays out (Task 8), ring pulses "catch me", and only now is the sun
+   a pointer target. The pulse reuses the ringout vocabulary as a loop. */
+.kq-fsun.landed{cursor:pointer}
+/* Every other control gets the teal focus ring; the hero button never had one
+   (final review M2) - land() moves keyboard focus here (js), so a keyboard
+   child had no visible indicator that the sun was the live target. */
+.kq-fsun:focus-visible{outline:3px solid var(--teal-deep); outline-offset:6px}
+/* A child aims at what they see, not at the 72px disc underneath it: the rays
+   ARE the "catch me!" art, up to 1.8x the disc, and pointer-events:none on
+   them (css:409) meant a tap on a ray - or the empty gaps between rays,
+   still inside the svg's own box - hit the field behind the sun instead of
+   the button. Scoped to .landed only: during a glide the rays are
+   display:none anyway, so this never widens the pursuit target. */
+.kq-fsun.landed .frays{pointer-events:auto}
+.kq-fsun.landed .ring1{animation:catchpulse 1.4s ease-out infinite}
+@keyframes catchpulse{0%{transform:scale(.85); opacity:0}
+  35%{opacity:.85}100%{transform:scale(1.3); opacity:0}}
+/* the hero celebrates itself - no separate sun pops in. This rule and .tapped
+   below tie at specificity (1,2,0), so if both classes were ever present at
+   once the LATER rule (.tapped, being declared after) would win and the
+   celebration pop would silently not (re)start - same animation, so no value
+   change to trigger it. endFollow() (js) removes .tapped itself before adding
+   .celebrate so the two are never simultaneous; this comment is the guard
+   against "clean up" removing that line as redundant (final review M1). */
+#screen-follow.celebrate .kq-fsun{animation:pop .55s ease-out}
+/* pop() adds .tapped; every screen scopes its own rule for it (css:361-363) */
+#screen-follow .kq-fsun.tapped{animation:pop .55s ease-out}
+/* The field is sized, NOT stretched. An earlier version used flex:1 1 auto so it
+   took all the column's leftover space - which fixed a too-flat field but ate the
+   whole screen, pinning the headline to the very top edge and the dots to the
+   very bottom with 516px of dead cream between them. Every other break screen
+   has a BOUNDED hero (the sun, 190-240px), which is what lets .kq-centercol
+   actually centre the cluster. A bounded height restores that and still leaves
+   the vertical leg ~4.9deg on a phone and ~7.2deg on a desktop, well over the 4deg
+   floor, with the diagonal still clamped to 30deg. The cap is expressed in
+   DEGREES (9.2 * --px-per-deg), not a fixed 330px: in the near context (ppd 36)
+   it still resolves to ~331px, unchanged, but a fixed 330px cap broke the far/TV
+   context - there the sun is 2deg = 2*ppd, and at 1920px a 330px field dropped
+   the vertical leg to 2.6deg, under the 4deg floor. A degree cap scales with the
+   sun, holding the far-context leg at a constant ~7.2deg.
+   align-self and min-height are both load-bearing: an empty div in a centred
+   flex column has zero width, and without min-height:0 the column will not let
+   it shrink on a short viewport. Do NOT use cqh here - #app is
+   container-type:inline-size, so cqh does not resolve against it. */
+.kq-followfield{flex:0 0 auto; align-self:stretch; height:min(64cqw, calc(var(--px-per-deg) * 9.2px));
+  position:relative}
+#screen-follow .kq-centercol{gap:20px}
+#screen-follow.celebrate .ring1{animation:ringout .9s ease-out}
 
 /* ---------- after-break choice ---------- */
 .kq-pickhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
@@ -549,12 +698,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   color:var(--ink); font-size:11.5px; font-weight:600; padding:5px 11px; border-radius:99px;
   cursor:pointer; backdrop-filter:blur(6px)}
 .demo-bar button.selected{background:var(--teal); border-color:var(--teal); color:#fff}
-.demo-credit{flex-basis:100%; text-align:right; font-size:10px; color:var(--ink); opacity:.75}
 
 /* base tier is a flex column too — real phone browsers vary in height,
    and the 844px-fixed absolute layout collides below ~700px */
 .kq-arcwrap{top:40px; height:150px}
-.kq-timeleft{top:118px; right:20px}
+.kq-timeleft, .kq-ptpill.slot{top:118px; right:20px}
 .kq-content{position:absolute; left:0; right:0; top:150px; bottom:0; display:flex;
   flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:0 20px 12px;
   --playerw:min(100%, max(300px, calc((100vh - 330px) * 16 / 9)))}
@@ -572,11 +720,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-castpill{top:18px}
   .kq-arcwrap{top:0; height:130px}
   .kq-sun{width:70px; height:70px}
-  .kq-timeleft{top:82px; right:32px}
+  .kq-timeleft, .kq-ptpill.slot{top:82px; right:32px}
   .kq-content{position:absolute; left:0; right:0; top:122px; bottom:0; display:flex;
     flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:0 24px 14px}
   .kq-now{position:static; padding:0}
-  .kq-now h4{font-size:17px}
+  .kq-now .title{font-size:17px}
   .kq-now .sub{font-size:13px; margin-top:4px}
   /* player scales with the window: as wide as fits the height budget, never edge-to-edge */
   .kq-content{--playerw:min(84cqw, 760px, max(340px, calc((100vh - 337px) * 16 / 9)))}
@@ -597,7 +745,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   #screen-watching.wide .kq-qcard{width:84px; height:47px; border-radius:10px}
   #screen-watching.wide .kq-qname{font-size:12px; margin-top:4px; max-width:84px}
   #screen-watching.wide #watch-queue{--stripcard:84px}
-  #screen-watching.wide .kq-now h4{font-size:16px}
+  #screen-watching.wide .kq-now .title{font-size:16px}
   #screen-watching.wide .kq-now .sub{font-size:12.5px; margin-top:2px}
   .kq-whotitle{font-size:38px}
   .kq-who .facewrap{width:124px; height:124px}
@@ -609,20 +757,32 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-swatchrow{gap:19px}
   .kq-swatchrow i{width:56px; height:56px}
   .kq-pthead{font-size:40px}
+  /* This tier already grew the swatches and the seam headline but left the
+     headlines, the sub-line and all three suns at phone size — the same
+     partial scale the desktop tier had, one step down. These are the
+     midpoints between the base sizes and the 1100px ones, so the break
+     screens now grow evenly across all three tiers. */
+  .kq-breathhead,.kq-findhead,.kq-followhead{font-size:34px}
+  .kq-findsub,.kq-followsub{font-size:17.5px}
+  .kq-findsun{width:min(30cqw,154px)}
+  .kq-ptsun{width:min(34cqw,184px)}
+  #screen-breathing .kq-bsunwrap{width:min(40cqw,214px)}
 }
 
 /* ---------- wide tier ---------- */
 @container (min-width:1100px){
   .kq-head{top:26px; left:36px}
   .kq-head .av{width:46px; height:46px; font-size:19px}
-  .kq-head h4{font-size:19px}
+  .kq-head .name{font-size:19px}
   .kq-head .sub{font-size:14px}
   .kq-castpill{top:26px; font-size:15px; padding:10px 20px}
   .kq-arcwrap{height:150px}
   .kq-sun{width:92px; height:92px}
-  .kq-timeleft{top:100px; right:48px; font-size:14px; padding:5px 16px}
+  .kq-timeleft, .kq-ptpill.slot{top:100px; right:48px}
+  .kq-timeleft{font-size:14px; padding:5px 16px}
+  .kq-ptpill.slot{font-size:14px; padding:4px 16px}
   .kq-content{top:148px; gap:11px; padding:0 30px 22px}
-  .kq-now h4{font-size:21px}
+  .kq-now .title{font-size:21px}
   .kq-now .sub{font-size:14.5px; margin-top:6px}
   .kq-content{--playerw:min(72cqw, 980px, max(440px, calc((100vh - 385px) * 16 / 9)))}
   .kq-player{border-radius:24px}
@@ -632,6 +792,24 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-qcard,.kq-qend{width:120px; height:68px; border-radius:14px}
   .kq-qname{max-width:120px}
   #watch-queue{--stripcard:120px}
+  /* #screen-watching.wide's tablet-tier rules (601-1099px, above) are scoped
+     with ID+class+class specificity, which beats this tier's plain-class
+     rules regardless of source order - so once wide became the default
+     state rather than an opt-in toggle, those tablet values leaked into
+     this 1100px+ tier too (OPEN-ITEMS item 37, resolved). Give this tier
+     its own deliberate values instead of inheriting anything by accident.
+     Shrunk the arc/sun deliberately (not just resetting the leak) to match
+     KidQ's own deployed early-access build, which uses a shallow arc and a
+     small sun that barely competes with the player for vertical room -
+     the sun here goes from 92px to 44px, the arc from 150px to 80px, which
+     frees real height for --playerw's budget (298, not 361 - the arc used
+     to need 63px more headroom than it does now). positionSun() (js) was
+     retuned to match this shallower geometry in the same pass. */
+  #screen-watching.wide .kq-arcwrap{height:80px}
+  #screen-watching.wide .kq-sun{width:44px; height:44px}
+  #screen-watching.wide .kq-timeleft{top:53px}
+  #screen-watching.wide .kq-content{top:85px; gap:11px;
+    --playerw:min(88cqw, 1040px, max(440px, calc((100vh - 298px) * 16 / 9)))}
   .kq-bigpause{width:84px; height:84px}
   .kq-whotitle{font-size:46px}
   .kq-whorow{gap:56px}
@@ -651,10 +829,21 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   #screen-choice .kq-qcard,#screen-choice .kq-qend{width:120px; height:68px; border-radius:14px}
   #screen-choice .kq-qname{max-width:120px}
   #screen-choice .kq-qend{font-size:15px}
-  .kq-breathhead,.kq-findhead{font-size:38px}
+  .kq-breathhead,.kq-findhead,.kq-followhead{font-size:38px}
   .kq-swatchrow{gap:22px}
   .kq-swatchrow i{width:64px; height:64px}
+  /* the sun and the sub-line take the same step the swatches do, so the game
+     scales as one piece. Capped: it stays the centred game it is on a phone,
+     not a wall of sun. */
+  .kq-findsun{width:min(30cqw,176px)}
+  .kq-findsub,.kq-followsub{font-size:19px}
   .kq-pthead{font-size:46px}
+  .kq-ptsun{width:min(34cqw,208px)}
+  /* the offline fallback sun, shown only when the Lottie doesn't load. Scaled
+     with the rest so the break screens grow as one piece either way, and so it
+     stays larger than the seam's sun, which is the relationship the base sizes
+     already set (40cqw/190 against 34cqw/160). */
+  #screen-breathing .kq-bsunwrap{width:min(40cqw,240px)}
 }
 
 /* ---------- reduced motion ---------- */
@@ -665,3 +854,16 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   *, *::before, *::after{animation-duration:.001ms !important; animation-iteration-count:1 !important;
     transition-duration:.12s !important}
 }
+
+/* The blanket rule above never zeroes animation-delay, and later() clamps the
+   splash's own screen-transition timers to 200ms under reduced motion - so
+   without this, d/Q (240ms/360ms delay) and their seeds never visibly land
+   before the screen moves on. */
+.reduce-motion #screen-splash .balloon,
+.reduce-motion #screen-splash .seed{ animation-delay:0s !important }
+
+/* In saccade mode the head should NOT be still - the eyes are meant to jump - so
+   the copy changes rather than shrinking. */
+.m-reduced{display:none}
+.reduce-motion .m-full{display:none}
+.reduce-motion .m-reduced{display:inline}
