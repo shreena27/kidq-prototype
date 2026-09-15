@@ -262,6 +262,103 @@
     </div>
   </section>
 
+  <!-- SETTLE: flower and candle breathing break. Promoted from the breathing
+       screen's own offline-fallback SVG row above (spec 2026-09-16 kidq-
+       flower-candle-break-design.md) - the trio geometry (flower left, sun
+       centre, candle right) is copied from that row, then recoloured (§3)
+       and given faces (§3). The breathing screen above is untouched (§8/§9):
+       nothing here shares an ID with it, and every behavioural CSS rule this
+       screen needs is re-authored under #screen-flower-candle, not inherited. -->
+  <section class="screen" id="screen-flower-candle" aria-label="Flower and candle breathing break">
+    <div class="kq-sky">
+      <span class="kq-ptpill slot">Playtime!</span>
+      <div class="kq-centercol" style="gap:22px">
+        <h1 class="kq-flowerhead" id="flower-headline" aria-live="polite">Smell the flower…</h1>
+        <div class="kq-breathrow">
+          <svg class="kq-prop" viewBox="0 0 86 104" aria-hidden="true">
+            <path d="M43 84 L43 48" stroke="#1F7A6D" stroke-width="3" stroke-linecap="round" fill="none"/>
+            <ellipse cx="52" cy="68" rx="8" ry="4.5" fill="#1F7A6D" transform="rotate(-28 52 68)"/>
+            <g class="petalsB">
+              <ellipse cx="43" cy="24" rx="7" ry="10.5" fill="#A8506E"/>
+              <ellipse cx="56" cy="33" rx="7" ry="10.5" fill="#A8506E" transform="rotate(72 56 33)"/>
+              <ellipse cx="51" cy="49" rx="7" ry="10.5" fill="#A8506E" transform="rotate(144 51 49)"/>
+              <ellipse cx="35" cy="49" rx="7" ry="10.5" fill="#A8506E" transform="rotate(-144 35 49)"/>
+              <ellipse cx="30" cy="33" rx="7" ry="10.5" fill="#A8506E" transform="rotate(-72 30 33)"/>
+            </g>
+            <!-- Centre disc + face live OUTSIDE .petalsB (Opus diff review,
+                 2026-09-16): .petalsB carries scale(.55) at rest (css ~433),
+                 so a disc/face drawn INSIDE it rendered sub-pixel through the
+                 intro and every blow phase - the spec's face is static, not
+                 part of the bloom. Same coordinates (43,38), now siblings
+                 rendered immediately after the group instead. Verified live
+                 that .petalsB's transform-origin:43px 38px still scales the
+                 petals around the flower-head centre with this circle no
+                 longer inside it (kidq-desktop-app.css has the verification
+                 note) - no origin fix was needed. -->
+            <!-- Centre disc: `sun` token `#FFC64D`, not `sun-deep` `#F0A72E`
+                 (spec §3 amendment, coordinator verdict 2026-09-16, closing
+                 the 2.54:1 miss logged at build time): measures 3.33:1
+                 against the rose petals, clearing the ≥3:1 gate, and
+                 matches the centre sun's own disc colour as a bonus. Face
+                 ink stays legible on it (9.12:1). -->
+            <circle cx="43" cy="38" r="8" fill="#FFC64D"/>
+            <!-- flower face (spec §3): closed-curve happy eyes + smile, ink
+                 #2E2A24, no blush (clouds/sunrise-sun precedent) - static,
+                 the petals carry the motion, so no phase-scoped rule below. -->
+            <g class="kq-flowerface" stroke="#2E2A24" stroke-width="1.4" fill="none" stroke-linecap="round">
+              <path d="M39.5 36.5 q1.25 1.1 2.5 0"/>
+              <path d="M44 36.5 q1.25 1.1 2.5 0"/>
+              <path d="M40 40.3 Q43 42.6 46 40.3" stroke-width="1.5"/>
+            </g>
+            <ellipse cx="34" cy="93" rx="24" ry="8" fill="#FFFFFF" opacity=".9"/>
+            <ellipse cx="55" cy="89" rx="16" ry="7" fill="#FFFFFF" opacity=".9"/>
+          </svg>
+          <div class="kq-bsunwrap">
+            <span class="halo"></span>
+            <span class="ring1"></span>
+            <svg class="bsun" viewBox="0 0 60 60" aria-hidden="true">
+              <g class="rays"><line x1="30" y1="1.5" x2="30" y2="9.5"/><line x1="50" y1="30" x2="58.5" y2="30"/><line x1="44" y1="16" x2="50" y2="10"/><line x1="44" y1="44" x2="50" y2="50"/><line x1="30" y1="50.5" x2="30" y2="58.5"/><line x1="10" y1="50" x2="16" y2="44"/><line x1="1.5" y1="30" x2="10" y2="30"/><line x1="10" y1="10" x2="16" y2="16"/></g>
+              <circle cx="30" cy="30" r="16.5" fill="#FFC64D"/>
+              <g class="eyesOpen" fill="#2E2A24"><circle class="eye" cx="24.5" cy="28" r="1.9"/><circle class="eye" cx="35.5" cy="28" r="1.9"/></g>
+              <g class="eyesClosed" stroke="#2E2A24" stroke-width="2" fill="none" stroke-linecap="round">
+                <path d="M21.5 28.5 q3 2.6 6 0"/><path d="M32.5 28.5 q3 2.6 6 0"/>
+              </g>
+              <path class="mouthSmile" d="M24.5 34.5 Q30 39 35.5 34.5" fill="none" stroke="#2E2A24" stroke-width="2.2" stroke-linecap="round"/>
+              <circle class="mouthO" cx="30" cy="36" r="3" fill="none" stroke="#2E2A24" stroke-width="2.2"/>
+            </svg>
+          </div>
+          <svg class="kq-prop" viewBox="0 0 86 104" aria-hidden="true">
+            <path class="smokeB" d="M43 40 q4 -7 0 -13 q-3 -5 1 -10" stroke="#6B6459" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="3 4"/>
+            <g class="flameB">
+              <!-- Flame body: gold #F0A72E (spec §3 amendment, user verdict
+                   2026-09-16, recorded wording: "is not looking good.. our
+                   svg version earlier was better" - reverted to gold from
+                   the coral this screen shipped with at first build). Gold
+                   alone measures 1.60-1.93:1 against this sky (Opus finding 1's
+                   original failure), so the 3:1 decorative floor is met with
+                   a ~2px outline ring in #9C6A18 instead of a hue swap -
+                   measures 3.66-4.41:1 against the three sky stops
+                   (kidq-desktop-app.css comment has the full numbers).
+                   No face (spec §3 amendment, user verdict 2026-09-16,
+                   superseding an eyes-only interim step): plain flame shape -
+                   only the flower gets a face. Blow phase is a plain fade +
+                   smoke puff, no pose to hold first. -->
+              <ellipse cx="43" cy="40" rx="6.5" ry="10" fill="#F0A72E" stroke="#9C6A18" stroke-width="2"/>
+              <ellipse cx="43" cy="43" rx="3.2" ry="5.5" fill="#FAF4E8"/>
+            </g>
+            <line x1="43" y1="48" x2="43" y2="53" stroke="#2E2A24" stroke-width="2" stroke-linecap="round"/>
+            <rect x="33" y="53" width="20" height="32" rx="5" fill="#FAF4E8" stroke="#6B6459" stroke-width="2"/>
+            <ellipse cx="34" cy="93" rx="24" ry="8" fill="#FFFFFF" opacity=".9"/>
+            <ellipse cx="55" cy="89" rx="16" ry="7" fill="#FFFFFF" opacity=".9"/>
+          </svg>
+        </div>
+        <!-- No sub-line under the row (spec §4, deliberate divergence from
+             breathing's own caption): voice + headline + dots carry it here. -->
+        <div class="kq-bdots" id="flower-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+
   <!-- find-a-colour break -->
   <section class="screen" id="screen-find" aria-label="Find three things break">
     <div class="kq-sky">
@@ -712,6 +809,9 @@
 <audio id="voice-count-9" src="proposal-src/voice-count-9.mp3" preload="auto"></audio>
 <audio id="voice-count-10" src="proposal-src/voice-count-10.mp3" preload="auto"></audio>
 <audio id="voice-count-open" src="proposal-src/voice-count-open.mp3" preload="auto"></audio>
+<audio id="voice-flower-intro" src="proposal-src/voice-flower-intro.mp3" preload="auto"></audio>
+<audio id="voice-flower-smell" src="proposal-src/voice-flower-smell.mp3" preload="auto"></audio>
+<audio id="voice-flower-blow" src="proposal-src/voice-flower-blow.mp3" preload="auto"></audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 <script src="kidq-hifive-anim.js"></script>

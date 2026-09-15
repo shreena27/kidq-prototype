@@ -242,7 +242,7 @@
      day is winding down) — the same arc the sun itself travels.            */
   const BREAK_GAMES = {
     move:   ["find", "tree"],
-    settle: ["breathe", "follow", "count"]
+    settle: ["breathe", "follow", "count", "flower_candle"]
   };
 
   // Returns the planned break points as fractions of the session's total
@@ -302,7 +302,15 @@
   // eventually repeat within a session; the old "never twice in a session"
   // claim stops being true once break count can exceed two). Rotation is
   // per-load; a real build would seed this from the child's recent history.
-  let breakRotation = Math.floor(Math.random() * 6);
+  // *12, not *6 (spec 2026-09-16 kidq-flower-candle-break-design.md, Opus
+  // finding 3; math corrected in a later diff review — see below): 6 was
+  // the LCM of the old bucket sizes (move:2, settle:3); settle is now 4, so
+  // the seed range must be a common multiple of 2 and 4 — 12 = LCM(2,3,4),
+  // which also stays valid if a bucket returns to 3 entries. Left at 6,
+  // `0..5 mod 4` would give breathe/follow double the pick frequency of
+  // count/flower_candle — this keeps every settle entry equally likely
+  // across a full rotation cycle.
+  let breakRotation = Math.floor(Math.random() * 12);
 
   // Which bucket break `index` draws from, honouring the live breakType flag.
   function bucketForBreak(index) {
@@ -688,9 +696,19 @@
 
   /* ---------- playtime seam + activity breaks ---------- */
   // A ternary only ever reaches two games. Every new break must land here or it
-  // silently runs breathing.
-  const BREAK_START = { find: startFind, breathe: startBreathing, follow: startFollow, tree: startTree, count: startCount };
+  // silently runs breathing. startFlowerCandle is declared as a hoisted
+  // function (below), not a const arrow (spec 2026-09-16 kidq-flower-candle-
+  // break-design.md, Opus finding 14) - this literal runs before every
+  // break's own function is declared further down the file, and only
+  // survives because function declarations hoist.
+  const BREAK_START = { find: startFind, breathe: startBreathing, follow: startFollow, tree: startTree, count: startCount, flower_candle: startFlowerCandle };
 
+  // forceGame: the manual test hook (console-callable, e.g.
+  // startPlaytimeSeam("flower_candle")) - kept and documented rather than
+  // deleted (spec 2026-09-16 kidq-flower-candle-break-design.md §7) since
+  // PR #36 removed the demo bar's own Break: jump buttons and the shipped
+  // demo data cannot reach every bucket organically; cheapest permanent
+  // verify path for every future break too.
   function startPlaytimeSeam(forceGame) {
     video.pause();
     showScreen("screen-playtime");
@@ -1302,6 +1320,88 @@
     countTrail.textContent = "";
     hold(() => sayLine($("#voice-count-intro"), "Close your eyes… and count with me!"), 600);
     hold(runTenCount, 600 + TEN_INTRO_MS);
+  }
+
+  /* --- SETTLE: smell the flower, blow out the candle ---
+     Spec 2026-09-16 kidq-flower-candle-break-design.md. Promoted from
+     breathing's own offline-fallback SVG row (index.html #screen-breathing)
+     to its own full break, three rounds, zero taps - same no-input
+     discipline as breathe and count. Every phase is voiced (spec §4: "0-6s
+     can't read"), so this follows count's own hush-per-tick pattern rather
+     than breathing's "only the opening line is spoken" choice. */
+  const flowerScreen = $("#screen-flower-candle");
+  const flowerHeadline = $("#flower-headline");
+  const flowerDots = $$("#flower-dots i");
+
+  // voice-flower-intro/-smell/-blow.mp3 (edge-tts en-IN-NeerjaNeural
+  // --rate=-10%, same pipeline as follow/tree/count), measured with mutagen:
+  // intro 4.224s, smell 2.352s, blow 2.568s. FC_PHASE_MS is the shared
+  // smell/blow phase length (spec §4): max(the longer clip + a ~300ms
+  // breathing room, 3500) capped ~4000 (finding 12 - 6 x 4.5s would overshoot
+  // §1's own honest-length ceiling) - here the 3500 floor wins outright
+  // (2568 + 300 = 2868 < 3500), same "measured, not the spec's own estimate"
+  // lesson tree/count already established.
+  const FC_INTRO_MS = 4224;
+  const FC_SMELL_MS = 2352;
+  const FC_BLOW_MS = 2568;
+  const FC_PHASE_MS = 3500;
+
+  // startFlowerCandle is a hoisted function declaration, not a const arrow
+  // (spec Opus finding 14) - see the BREAK_START comment above for why.
+  function startFlowerCandle() {
+    showScreen("screen-flower-candle");
+    // Re-entry safety (spec §6), same discipline as startBreathing/
+    // startCount: clear every phase class so a restart (resize, reduced-
+    // motion toggle) can never resume mid-round. Clearing .ph-blow alone
+    // already relights the flame and resets the halo/petals/sun to their
+    // rest state - all three are plain CSS defaults, not JS-tracked flags.
+    flowerScreen.classList.remove("ph-smell", "ph-blow", "celebrate");
+    flowerDots.forEach((d) => d.classList.remove("on"));
+    flowerHeadline.textContent = "Smell the flower…";
+    hold(() => sayLine($("#voice-flower-intro"), "Smell the flower… then blow out the candle!"), 600);
+    let round = 0;
+    function smell() {
+      flowerScreen.classList.remove("ph-blow");
+      flowerScreen.classList.add("ph-smell");
+      flowerHeadline.textContent = "Smell the flower…";
+      hush(); // every phase's own line (spec §4/finding 15) retires whatever came before
+      sayLine($("#voice-flower-smell"), "Smell the flower…");
+      hold(blow, FC_PHASE_MS);
+    }
+    function blow() {
+      flowerScreen.classList.remove("ph-smell");
+      flowerScreen.classList.add("ph-blow");
+      flowerHeadline.textContent = "Blow out the candle!";
+      hush();
+      sayLine($("#voice-flower-blow"), "Blow out the candle!");
+      // Round dot fills at BLOW-PHASE END (spec §4), same as breathe's own
+      // `later(() => { breathDots[round]... }, PHASE)` idiom - so the dot
+      // fill is deferred into the phase-end callback below, not fired the
+      // instant the blow phase starts. isFinal is captured before `round`
+      // increments, since the final round's own hold duration differs
+      // (finding 12's cushion) from every earlier round's plain FC_PHASE_MS.
+      const isFinal = round === 2;
+      // Final round (spec §4, finding 12): the last blow phase must outlast
+      // its own clip by a real cushion before celebration starts - the same
+      // TEN_OPEN_MS reasoning count's own "Open your eyes!" line uses -
+      // guaranteed algebraically here rather than by FC_PHASE_MS just
+      // happening to be big enough today.
+      hold(() => {
+        flowerDots[round]?.classList.add("on");
+        round += 1;
+        if (isFinal) celebrate(); else smell();
+      }, isFinal ? Math.max(FC_PHASE_MS, FC_BLOW_MS + 220) : FC_PHASE_MS);
+    }
+    function celebrate() {
+      flowerScreen.classList.remove("ph-blow");
+      flowerScreen.classList.add("celebrate");
+      flowerHeadline.textContent = "You did it! ✨";
+      hush(); // finding 15: hush before the celebration line too, not just the phase lines
+      sayLine($("#voice-follow-done"), "You did it!"); // shared ending clip, spec §5/§7.1
+      safePlay(chime);
+      hold(startChoice, 1900); // matches every other break's celebration exit
+    }
+    hold(smell, 600 + FC_INTRO_MS);
   }
 
   /* ---------- after-break choice (within the parent's picks) ---------- */
