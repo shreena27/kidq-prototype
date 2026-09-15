@@ -413,6 +413,36 @@
     void splash.offsetWidth;
     splash.classList.add("go");
     safePlay(jingle);
+    // That safePlay() above is a best-effort, not a guarantee. startSplash()
+    // runs at the bottom of this file on load, before anyone has touched
+    // anything, and every modern browser's autoplay policy blocks
+    // HTMLMediaElement.play() with sound until the document has had at least
+    // one real user gesture - play() rejects with NotAllowedError ("play()
+    // failed because the user didn't interact with the document first").
+    // safePlay swallows that rejection by design, so on a fresh profile with
+    // no engagement history the splash jingle is simply silent. No code can
+    // override that policy; the most we can do is take the first gesture we
+    // are given and spend it on the jingle. Hence this one-shot listener:
+    // `capture` so a handler further down the tree can't stop it reaching us,
+    // `once` so it unregisters itself after the first tap and never leaks.
+    //
+    // Both guards matter. The splash is only ~2.4s long, so by the time a
+    // child taps, the app has usually moved on to login or further - firing a
+    // stale jingle over a later screen would read as a new bug, not a fix, so
+    // we re-check that the splash is still the active screen using the same
+    // classList.contains("active") idiom the rest of this file uses for
+    // "is screen X still showing". And on a browser that DID have engagement
+    // history, the load-time safePlay already worked, so restarting from 0
+    // here would double-play or yank already-playing audio back to the top.
+    // `paused && !currentTime` is exactly "never actually started": a jingle
+    // that is mid-play isn't paused, and one that played through has a
+    // non-zero currentTime, so neither gets clobbered. No extra flag needed -
+    // the element's own state already says it.
+    document.addEventListener("click", () => {
+      if (!splash.classList.contains("active")) return;
+      if (!jingle || !jingle.paused || jingle.currentTime) return;
+      safePlay(jingle);
+    }, { once: true, capture: true });
     later(() => splash.classList.add("off"), 2000);
     later(startLogin, 2400);
   }
