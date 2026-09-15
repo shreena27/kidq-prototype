@@ -237,11 +237,19 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-expand .ic-shrink{display:none}
 #screen-watching.wide .kq-expand .ic-grow{display:none}
 #screen-watching.wide .kq-expand .ic-shrink{display:block}
-.kq-stripcard{cursor:pointer; transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease}
-.kq-stripcard:hover:not(.now){transform:translateY(-3px)}
-.kq-stripcard:active:not(.now){transform:scale(.95)}
+/* playful placement, same family as .wn-card (what's-next) and .kq-qcard--pick
+   (choice screen) - one shared --tilt cycle set on .kq-pickwrap below, inherited
+   here since custom properties inherit. Meaningful, not decoration-only: tilted
+   means "available", straight means "this is the one" - the now-playing card
+   forces rotate(0) below, the same semantic the what's-next pick straightening
+   at choose uses. Composed with (not replacing) the existing hover/active
+   transforms so a tilted card doesn't snap straight on hover then back. */
+.kq-stripcard{cursor:pointer; transform:rotate(var(--tilt));
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease}
+.kq-stripcard:hover:not(.now){transform:rotate(var(--tilt)) translateY(-3px)}
+.kq-stripcard:active:not(.now){transform:rotate(var(--tilt)) scale(.95)}
 .kq-stripcard:focus-visible{outline:3px solid var(--teal-deep); outline-offset:2px}
-.kq-stripcard.now{cursor:default; border:3px solid var(--sun);
+.kq-stripcard.now{cursor:default; border:3px solid var(--sun); transform:rotate(0);
   box-shadow:0 0 0 5px rgba(255,198,77,.22), 0 8px 18px -10px rgba(46,42,36,.35)}
 .kq-stripcard.watched{opacity:.55}
 .kq-qname.nowlab{color:var(--teal-deep)}
@@ -267,9 +275,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-qcard{width:124px; height:70px; border-radius:14px; overflow:hidden; border:2px solid rgba(46,42,36,.1);
   background:linear-gradient(135deg,#D8C89C,#B9A574); padding:0}
 .kq-qcard img{display:block; width:100%; height:100%; object-fit:cover}
-.kq-qend{width:124px; height:70px; border-radius:14px; background:var(--night); border:2px dashed var(--dusk);
-  display:flex; align-items:center; justify-content:center; color:var(--cream); font-family:var(--disp);
-  font-weight:800; font-size:15px; flex-shrink:0}
+/* .kq-qend ("The End" card) removed: dead CSS with no JS consumer in this file's
+   entire history (confirmed via git log -S) - the queue was never rendering it.
+   User decision: no replacement either, card or text marker. The session's end
+   is carried by the flow itself (last video -> sunset -> all-done), not by a
+   queue element, so the row simply stops after its last real card. */
 /* The session strip lists EVERY video the parent picked, so its width grows with
    the session. Let the cards shrink to fit the frame instead of overflowing it:
    the row is flex-centred, which hides overflow from scrollWidth checks, so it
@@ -344,7 +354,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 #screen-breathing.lottie-on .kq-breathrow{display:none}
 
 /* ---------- find-a-colour break ---------- */
-.kq-findhead,.kq-followhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
+.kq-findhead,.kq-followhead,.kq-treehead,.kq-counthead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
   color:var(--ink); text-wrap:balance; min-height:1.2em}
 .kq-findsub,.kq-followsub{font-size:16.5px; font-weight:500; color:var(--ink-soft)}
 /* The colour the child is hunting for. For a pre-reader these swatches ARE the
@@ -501,33 +511,305 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 #screen-follow .kq-centercol{gap:20px}
 #screen-follow.celebrate .ring1{animation:ringout .9s ease-out}
 
+/* ---------- break-count digit pattern (shared) ----------
+   The live count for any timed counting break (tree's two 5-counts today;
+   count-to-10 next). User steer (mid tree-pose build, 2026-09-15): a small
+   text sub-line read as too quiet for a MOVE-bucket break - the current
+   number needs to be "a bit fun and playful and visible", display-scale,
+   entering with the existing squash-stretch `pop` vocabulary (still no
+   confetti/burst - brand's anti-overstimulation line holds).
+   Colour, round 2 (same session): a sun-gold CHIP behind ink digits was the
+   first answer, then overruled - not sun-gold/yellow, and measured against
+   the SKY directly rather than a badge. Flat sun (#FFC64D) / sun-deep
+   (#F0A72E) text measured 1.2-1.9:1 against this sky's three gradient
+   stops (#FDF8EC/#F7EBD2/#F1E2C4), nowhere near the 3:1 large-text AA
+   floor this project holds every game element to (the same problem
+   follow's own hero rim already worked around, css:406-409) - so no chip
+   was going to rescue that pairing at display scale either. Plain teal
+   (var(--teal), the app's one UI accent) measures 4.04-4.88:1 across the
+   same three stops - clears 3:1 everywhere with real margin - so the digit
+   sits directly on the sky, no badge. --cnt is the one number each break
+   screen sets per width tier; everything else scales off it. */
+.kq-breakcount{display:flex; align-items:center; justify-content:center; gap:10px;
+  --cnt:36px}
+.kq-breakcount-big{font-family:var(--disp); font-weight:800; font-size:var(--cnt);
+  color:var(--teal); line-height:1}
+.kq-breakcount-trail{font-family:var(--disp); font-weight:700; font-size:calc(var(--cnt) * .48);
+  color:var(--ink-soft); opacity:.72; min-height:1em}
+/* pop() (js) adds .tapped; every screen scopes its own rule for it (the
+   established per-screen pattern, css:394/481) - each break-count host
+   screen adds its own `#screen-X .kq-digitballoon.tapped{...}` line (moved
+   from `.kq-breakcount-big` onto the balloon wrapper below, so the WHOLE
+   balloon - not just the bare glyph - carries the entrance motion). The
+   trail stays a bare `.kq-breakcount-big`-less span, untouched by any of
+   this - no balloon there (clutter, not a count aid).
+
+   ---------- break-count digit BALLOON (shared, user request 2026-09-15:
+   "make them like coming on balloon") ----------
+   Balloon over ball: the splash's own KidQ letters (css:89-141) are already
+   glossy inflating balloons - an established brand vocabulary, not a new
+   shape to teach. Same 5-stop radial-gradient RECIPE, same four hues in the
+   same order the splash uses (teal->gold->coral->dusk), cycling once per
+   digit change - `hue-<name>` on `.kq-digitballoon`, swapped in JS
+   (setBalloonHue, kidq-desktop-app.js).
+   The gradient's SIZE is the one deliberate departure from the splash's own
+   default farthest-corner sizing: an explicit `circle calc(var(--cnt) *
+   .729)` instead. The splash can use the default because its balloons ARE
+   the letters, filling their own glyph outline edge-to-edge; a small round
+   badge's own CENTRE - where the digit sits - only reaches t~0.3 of the
+   default gradient (still inside the near-white highlight/lower-highlight
+   band), which is why an early pass measured cream failing on teal/coral
+   too, not just gold. Shrinking the radius moves the badge's centre to
+   t~0.55 - the recipe's own literal MID-tone, past the 36/40% "true hue"
+   stop, short of the 62/66% deep one - without touching a single colour
+   value. Measured there (brand.md §5; `scratchpad/balloon-sweep-t.js` this
+   session), against the two text colours brand.md §12 already uses
+   everywhere else (cream `--cream`, ink `--ink`):
+     teal  #258776  cream 4.00:1  ink 3.25:1  -> cream (both pass; cream wins)
+     gold  #F6B43B  cream 1.66:1  ink 7.83:1  -> ink (cream fails outright)
+     coral #D0604C  cream 3.52:1  ink 3.69:1  -> cream (per the design brief;
+                                                  both pass, margin is close)
+     dusk  #7C67B6  cream 4.28:1  ink 3.04:1  -> cream (both pass; cream wins)
+   All eight combinations clear the 3:1 AA large-text floor; gold is the one
+   hue that needs ink, matching the sun-gold-vs-cream failure this app has
+   measured everywhere else it appears (css:521-530). The digit swaps colour
+   on the SAME `hue-gold` class the body's gradient swaps on - one class,
+   two effects, never drifts.
+   Knot: a small solid triangle in the SAME hue's own 100% (deepest) recipe
+   stop - the shape's own shadow colour, not a new one. String: a short,
+   plain, slightly-tilted thread in `--ink-soft` - neutral across all four
+   hues (real balloon string doesn't recolour with the balloon), and SHORT
+   on purpose (spec: "a short string" - a long one is more rigging than
+   read, at this badge scale). */
+.kq-digitballoon{position:relative; display:block;
+  width:calc(var(--cnt) * 1.15); height:calc(var(--cnt) * 1.505); flex-shrink:0}
+.kq-balloon-body{position:absolute; top:0; left:0; width:100%;
+  height:calc(var(--cnt) * 1.32); border-radius:50%;
+  filter:drop-shadow(0 3px 5px rgba(46,42,36,.28))}
+.kq-balloon-knot{position:absolute; left:50%; top:calc(var(--cnt) * 1.28);
+  width:calc(var(--cnt) * .16); height:calc(var(--cnt) * .1);
+  transform:translateX(-50%); clip-path:polygon(50% 100%, 12% 0, 88% 0)}
+.kq-balloon-string{position:absolute; left:50%; top:calc(var(--cnt) * 1.36);
+  width:1.5px; height:calc(var(--cnt) * .16); background:var(--ink-soft);
+  opacity:.5; transform:translateX(-50%) rotate(-4deg); transform-origin:top center}
+/* The digit glyph itself: same element JS already writes to
+   (`#tree-count-big`/`#count-big`, class `kq-breakcount-big`, unchanged) -
+   these rules only override its position/size/colour when it lives inside
+   a balloon; font-family/weight/line-height still come from the base rule
+   above. Higher specificity (two classes) beats that base rule outright,
+   so the override holds regardless of source order. */
+.kq-digitballoon .kq-breakcount-big{position:absolute; inset:0 0 auto 0;
+  height:calc(var(--cnt) * 1.32); display:flex; align-items:center;
+  justify-content:center; font-size:calc(var(--cnt) * .78); color:var(--cream)}
+.kq-digitballoon.hue-gold .kq-breakcount-big{color:var(--ink)}
+
+.kq-digitballoon.hue-teal .kq-balloon-body{background-image:radial-gradient(
+  circle calc(var(--cnt) * .729) at 32% 24%,
+  #EFFFFA 0%, #9ADEC9 9%, #35A98F 36%, #1F7A6D 62%, #123F37 100%)}
+.kq-digitballoon.hue-teal .kq-balloon-knot{background:#123F37}
+.kq-digitballoon.hue-gold .kq-balloon-body{background-image:radial-gradient(
+  circle calc(var(--cnt) * .729) at 32% 24%,
+  #FFFBEA 0%, #FFE29A 9%, #FFC64D 40%, #F0A72E 66%, #8F5C12 100%)}
+.kq-digitballoon.hue-gold .kq-balloon-knot{background:#8F5C12}
+.kq-digitballoon.hue-coral .kq-balloon-body{background-image:radial-gradient(
+  circle calc(var(--cnt) * .729) at 32% 24%,
+  #FFF1EC 0%, #F5A897 9%, #E2705E 40%, #C2543F 66%, #6E2818 100%)}
+.kq-digitballoon.hue-coral .kq-balloon-knot{background:#6E2818}
+.kq-digitballoon.hue-dusk .kq-balloon-body{background-image:radial-gradient(
+  circle calc(var(--cnt) * .729) at 32% 24%,
+  #F6F1FF 0%, #C4B2EA 9%, #8E79C9 40%, #6F5AA8 66%, #382A66 100%)}
+.kq-digitballoon.hue-dusk .kq-balloon-knot{background:#382A66}
+
+/* ---------- MOVE: stand like a tree ---------- */
+/* She is the hero - largest element, centred, bounded (the follow lesson:
+   .kq-centercol only centres when the hero is bounded). Sized a step above
+   breathing's sun (190/214/240) since she is the biggest hero of the four
+   break screens, but only a step - the count chip (below) adds its own
+   height to this screen's cluster that breathing's dots-only sub-row
+   doesn't carry, so the stage itself stays close to breathing's own caps to
+   keep the assembled cluster within the sibling screens' vertical budget
+   (spec §9.1; measured against find's own cluster, the tallest of the
+   other three). Square stage: the sourced asset's own canvas is 2000x2000. */
+.kq-treescene{position:relative; display:flex; align-items:center; justify-content:center;
+  width:100%}
+.kq-treestage{position:relative; width:min(46cqw,196px); aspect-ratio:1;
+  transition:transform .45s ease-out}
+.kq-treelottie{width:100%; height:100%; transition:transform .3s ease}
+.kq-treelottie.mirrored{transform:scaleX(-1)}
+/* "she flips inside a small bounce of the container - up, flip at the apex,
+   down" (spec §4). The bounce lives on the STAGE (translateY only); the
+   mirror lives on the LOTTIE CONTAINER (scaleX only) - two different
+   elements, so neither clobbers the other's own `transform` (the same lesson
+   follow's own CSS calls out at kidq-desktop-app.css:410-413). */
+.kq-treestage.flipping{animation:tree-flip .9s cubic-bezier(.34,1.56,.64,1)}
+@keyframes tree-flip{0%{transform:translateY(0)}40%{transform:translateY(-14px)}
+  100%{transform:translateY(0)}}
+/* Reduced motion (spec §6): a crossfade instead of the bounce - fade out,
+   swap the mirror + still frame while invisible, fade back in. No untracked
+   glide, the same shape follow's placeHidden uses for its own reposition. */
+.kq-treestage.crossfade .kq-treelottie{transition:opacity .3s ease; opacity:0}
+/* She steadies to upright between holds (spec §3): pausing a transform
+   animation freezes it wherever the wobble happened to be, not at upright,
+   so this drops the animation entirely instead and eases the stage's own
+   static transform back to neutral. */
+.kq-treestage.settle{animation:none; transform:rotate(0)}
+/* Reduced motion needs no override here: the global .reduce-motion * rule
+   (css:862) already crushes this to a no-op, the same as every other
+   ambient loop in this file (halo pulse, ray ripple, moon sway...). */
+.kq-treestage{animation:kq-treewobble 4.4s ease-in-out infinite}
+@keyframes kq-treewobble{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.8deg)}}
+/* Offline fallback (the .lottie-on pattern breathing and high-five both use):
+   without the sourced asset, the scene runs with no demonstrator at all -
+   sun, trees, headline, counts and voice still play. No authored human
+   substitute (spec §3) - that would re-import the round-5 craft risk this
+   spec exists to retire. */
+.kq-treelottie{display:none}
+#screen-tree.lottie-on .kq-treelottie{display:block}
+/* The sun perches beside her, small (~1/3 her height), lower side - existing
+   face, halo, no limbs; the stick-limb performance is retired with this
+   spec. Positioned lower-left of the stage so it never crosses her
+   silhouette (spec §3's "clean against open sky" rule, verified per-width). */
+.kq-treesun{position:absolute; left:-8%; bottom:2%; width:min(18cqw,78px);
+  z-index:1}
+.kq-treesun .halo{inset:-16px;
+  background:radial-gradient(circle, rgba(255,198,77,.4) 0%, rgba(255,198,77,0) 68%);
+  animation:kq-halopulse 3.6s ease-in-out -1s infinite}
+.kq-treesun .bsun{animation:kq-treewobble 3.6s ease-in-out -.6s infinite;
+  transition:transform .45s ease-out}
+.kq-treestage.settle ~ .kq-treesun .bsun{animation:none; transform:rotate(0)}
+#screen-tree.celebrate .kq-treesun .bsun{animation:pop .55s ease-out}
+/* Trees at the side edges (user addition, 2026-09-14): teal foliage, ink-soft
+   trunks, low in the side margins, behind the hero, slightly dimmed,
+   edge-cropping allowed. Craft tier = breathing's clouds: simple geometry
+   (stacked circles + a trunk rect), no character risk. They sway very
+   gently, staggered phases, the same subtle tier as the sun's wobble - which
+   quietly states the exercise's own point: trees wobble and still stand. */
+/* Positioned off the vertical CENTER (top:50% + a downward nudge), not the
+   raw viewport bottom: .kq-centercol vertically centers the whole cluster
+   regardless of viewport height, so anchoring to the true screen bottom
+   left the trees far below her feet on a tall test viewport and would clip
+   them off-screen entirely on a real, shorter phone height. `top` (not
+   `transform`) carries the position so the sway keyframe's own `rotate()`
+   below never has to share the `transform` property with a translate. */
+.kq-sidetree{position:absolute; top:calc(50% + 54px); width:min(13cqw,70px); height:auto;
+  opacity:.62; transform-origin:50% 96%; animation:kq-treesway 5.2s ease-in-out infinite;
+  pointer-events:none; z-index:0}
+.kq-sidetree--l{left:2%}
+.kq-sidetree--r{right:2%}
+@keyframes kq-treesway{0%,100%{transform:rotate(-2.4deg)}50%{transform:rotate(2.6deg)}}
+/* One happier rustle during the celebration - a touch faster and wider than
+   the idle sway, still the same subtle character (never an earned pop). */
+#screen-tree.celebrate .kq-sidetree{animation:kq-treerustle .7s ease-in-out 2}
+@keyframes kq-treerustle{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(5deg)}}
+/* Celebration - ID-scoped, #screen-tree inherits nothing (the trap every
+   break screen has to handle on its own). */
+#screen-tree.celebrate .kq-treehead{animation:pop .7s cubic-bezier(.34,1.56,.64,1)}
+#screen-tree.celebrate .kq-treestage{animation:pop .55s ease-out}
+/* the count is spent once she's celebrating - an empty gold chip would read
+   as unfinished rather than as "done" */
+#screen-tree.celebrate .kq-breakcount{display:none}
+/* pop() (js) adds .tapped to the BALLOON (not the bare glyph) on every
+   digit change - see the shared break-count digit balloon above. The whole
+   balloon - body, knot, string, digit - squash-stretches in together as one
+   unit, since transform on the wrapper carries every absolutely-positioned
+   child with it. Energetic, like the splash's own inflate - user's own
+   framing for this entrance. */
+#screen-tree .kq-digitballoon.tapped{animation:pop .55s ease-out}
+
+/* ---------- SETTLE: count to ten, eyes closed ----------
+   Donor (spec 2026-09-15 kidq-count-to-ten-break-design.md §2): copy
+   BREATHING's own .bsun dual-group eye markup (css:321-323) - the only sun
+   with a working eye TOGGLE. The sunrise sun's eyes were rejected as a
+   donor: its unscoped .eyes-awake{opacity:0} only lifts under .screen.risen,
+   which #screen-count never gets, so "Open your eyes!" would render no eyes
+   at all. This is new markup + new ID-scoped CSS below, not shared
+   component reuse - no shared sun component exists yet. No z's: this sun is
+   calm-awake, counting, not asleep. */
+.kq-countsun .halo{inset:-30px;
+  background:radial-gradient(circle, rgba(255,198,77,.4) 0%, rgba(255,198,77,0) 68%);
+  animation:kq-halopulse 3.4s ease-in-out -1.2s infinite}
+/* Eyes default OPEN - the shared unscoped .bsun .eyesClosed{opacity:0} rule
+   (css:321) already gives that for free. .dim (below) is the ONE state
+   class that drives both the sky dim and the closed eyes together, since
+   the spec's own sequence table pairs them at the same two beats (entry
+   closes both, "Open!" opens both) - scoped under #screen-count, never
+   relying on breathing's own .ph-in. */
+#screen-count.dim .kq-countsun .bsun .eyesOpen{opacity:0}
+#screen-count.dim .kq-countsun .bsun .eyesClosed{opacity:1}
+/* Sky dim: the existing .kq-duskveil mechanism (css:66-68), pinned to a NEW
+   state class at ~0.25 opacity (spec §2) - .screen.setting's own 0.85 is a
+   full dusk, far too strong for "dims slightly," so count gets its own
+   class rather than reusing that name. Reduced motion: the global
+   .reduce-motion * rule (css:997-999) already crushes this transition to
+   120ms - do not fight it with transition:none, which loses to that
+   !important regardless of specificity. */
+#screen-count.dim .kq-duskveil{opacity:.25}
+/* Balloon entrance, quieter than tree's pop() (spec §1: "the entrance is a
+   slow pulse, not a bounce" - count is the settle game, not a MOVE break) -
+   and quieter again than the balloon design brief's own tree variant
+   (2026-09-15): "drifting gently up into place... slow float, no bounce".
+   A plain translateY + fade, no scale, no squash-stretch - replaces the
+   earlier kq-countpulse (a scale-up pulse on the bare digit); same wrapper,
+   same .pulse trigger class, same remove/reflow/add re-trigger helper
+   below. 0%/100% match the wrapper's own unanimated rest state
+   (transform:none, opacity:1 by default) exactly, same as pop() itself, so
+   reduced motion's blanket crush to .001ms (css:997-999) never leaves the
+   balloon stuck mid-float - it simply snaps to the same rest state a
+   completed animation would have reached anyway. */
+@keyframes kq-balloonfloat{0%{transform:translateY(14px); opacity:.4}100%{transform:translateY(0); opacity:1}}
+#screen-count .kq-digitballoon.pulse{animation:kq-balloonfloat .45s ease-out}
+/* Count's trail can run to NINE numbers (vs tree's four) - the width risk
+   spec §1 names explicitly ("one orphaned '· 10' away from wrapping" at the
+   390px tier), measured explicitly per spec §8.1: the worst case (big="10",
+   all nine numbers trailing, the shared " · " join unchanged) scrolls to
+   180px against 330px usable at the narrowest tier - real margin, so the
+   shared .kq-breakcount-trail size (css:527-528) needs no override here.
+   tabular-nums keeps that measurement stable as the digits change width. */
+#screen-count .kq-breakcount-trail{font-variant-numeric:tabular-nums}
+/* Celebration - ID-scoped, #screen-count inherits nothing (the trap every
+   break screen hits, spec §6). The count is spent once celebrating, same as
+   tree (css:620). */
+#screen-count.celebrate .kq-counthead{animation:pop .7s cubic-bezier(.34,1.56,.64,1)}
+#screen-count.celebrate .kq-countsun .bsun{animation:pop .55s ease-out}
+#screen-count.celebrate .kq-breakcount{display:none}
+
 /* ---------- after-break choice ---------- */
 .kq-pickhead{font-family:var(--disp); font-weight:800; font-size:30px; line-height:1.15;
   color:var(--ink); text-wrap:balance}
 .kq-picksub{display:flex; align-items:center; justify-content:center; gap:9px; font-size:16px;
   font-weight:500; color:var(--ink-soft)}
 .kq-pickwrap{display:flex; flex-direction:column; align-items:center; opacity:0;
-  transform:translateY(16px) scale(.94);
+  --tilt:-2.5deg; transform:translateY(16px) scale(.94);
   animation:kq-cardin .6s cubic-bezier(.34,1.56,.64,1) forwards}
 .kq-pickwrap:nth-child(2){animation-delay:.09s}
 .kq-pickwrap:nth-child(3){animation-delay:.18s}
 .kq-pickwrap:nth-child(4){animation-delay:.27s}
+/* same repeating -2.5/1.8/-2deg cycle as .wn-card (what's-next), one shared
+   "parent's picks" placement vocabulary across all three card rows. Modular
+   (3n+2 / 3n), not enumerated by index, so it keeps cycling correctly no
+   matter how many cards a row ends up with - unlike the animation-delay
+   overrides just above, which only ever need to stagger the first few. Set
+   here on the wrap (inherited by the .kq-qcard/.kq-stripcard child below, and
+   by that child alone - .kq-pickwrap's own transform is reset to none by
+   kq-cardin above, so the tilt would be silently thrown away every time if it
+   lived on the wrap's own transform instead of just its custom property). */
+.kq-pickwrap:nth-child(3n+2){--tilt:1.8deg}
+.kq-pickwrap:nth-child(3n){--tilt:-2deg}
 @keyframes kq-cardin{to{opacity:1; transform:none}}
-.kq-qcard--pick{cursor:pointer; border:3px solid var(--sun);
+.kq-qcard--pick{cursor:pointer; border:3px solid var(--sun); transform:rotate(var(--tilt));
   box-shadow:0 0 0 6px rgba(255,198,77,.18), 0 10px 22px -12px rgba(46,42,36,.35);
   transition:transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease}
-.kq-qcard--pick:hover{transform:translateY(-4px) scale(1.04);
+.kq-qcard--pick:hover{transform:rotate(var(--tilt)) translateY(-4px) scale(1.04);
   box-shadow:0 0 0 6px rgba(255,198,77,.32), 0 16px 30px -14px rgba(46,42,36,.45)}
-.kq-qcard--pick:active{transform:scale(.95)}
+.kq-qcard--pick:active{transform:rotate(var(--tilt)) scale(.95)}
 .kq-qcard--pick:focus-visible{outline:3px solid var(--teal-deep); outline-offset:3px}
 .kq-qname{font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink);
   text-align:center; margin-top:7px; max-width:124px; line-height:1.2;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
 #screen-choice .kq-centercol{top:230px; justify-content:flex-start; gap:16px}
 #screen-choice .kq-qrow{position:static; gap:10px}
-#screen-choice .kq-qcard,#screen-choice .kq-qend{width:96px; height:54px; border-radius:12px}
+#screen-choice .kq-qcard{width:96px; height:54px; border-radius:12px}
 #screen-choice .kq-qname{max-width:96px}
-#screen-choice .kq-qend{font-size:13px}
 #screen-choice .kq-sunbtnwrap{position:absolute; inset:0; border:none; background:none; padding:0;
   cursor:pointer}
 #screen-choice .kq-sunbtnwrap:focus-visible{outline:3px solid var(--teal-deep); outline-offset:-3px}
@@ -537,7 +819,16 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 #screen-choice .kq-sun.tapped svg{animation:pop .55s ease-out}
 
 /* ---------- all done ---------- */
-.kq-moontop{position:absolute; left:50%; top:56px; width:110px; height:110px; margin-left:-55px;
+/* a normal flex item now (see index.html) - it used to be position:absolute with a fixed
+   top:56px, which put it on a collision course with .kq-donehead on any viewport short
+   enough that the centered content block rose to meet it (reproduced via a
+   getBoundingClientRect sweep: overlap starting around h<=578px at typical widths and
+   h<=610px at the >=1100px tier, where the headline grows to 44px and needs more room). */
+/* margin-bottom clears .kq-moonhalo's own -26px inset (below) plus its kq-halopulse
+   scale(1.08) peak (~28px effective overflow at rest), which otherwise overhangs past
+   the column's 24px gap no matter how much room there is - a fixed relationship
+   between constants already declared elsewhere in this file, not a per-tier nudge. */
+.kq-moontop{position:relative; width:110px; height:110px; margin-bottom:6px;
   border:none; padding:0; background:none; cursor:pointer; animation:kq-mfloat 7s ease-in-out infinite}
 .kq-moonhalo{position:absolute; inset:-26px; border-radius:50%; pointer-events:none;
   background:radial-gradient(circle, rgba(250,244,232,.34) 0%, rgba(250,244,232,0) 66%);
@@ -634,34 +925,90 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-wn.in{opacity:1; transform:none}
 .kq-wn .wn-label{font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
   color:var(--dusk); text-align:center; margin-bottom:26px}
+/* 26px, not the pill's naive top:-13px clearance (which alone would only need
+   ~18px): measured live, the picked card's own choose-stage scale(1.12) growth
+   scales from its center, so it pushes the pill (which sits above that center)
+   further up than the unscaled -13px offset implies - 18px left the pill
+   overlapping the label by ~2.3px once fully grown. 26px clears it with a small
+   deliberate gap instead. */
 .wn-row{display:flex; gap:10px; justify-content:center}
-.wn-card{position:relative; background:var(--cream); border-radius:16px; padding:8px 8px 10px;
+/* per-card resting tilt, ported from the pitch's playful placement (proposal-src/
+   kidq-design-preview.html:247-256) - restored after an earlier pass retired it, per
+   explicit user request pointing back at the pitch a second time. Values are the
+   pitch's own: card 1 (no override) -2.5deg, card 2 1.8deg, card 3 -2deg. Static
+   placement, not motion: it's baked into the settled resting transform below, so it
+   lands at whatever speed the entrance transition runs (full speed, or shortened
+   under .reduce-motion's global transition-duration override) and then just sits
+   there - nothing here is gated by reduced motion on its own. */
+.wn-card{position:relative; --tilt:-2.5deg; background:var(--cream); border-radius:16px; padding:8px 8px 10px;
   display:flex; flex-direction:column; align-items:center; gap:6px; width:104px; opacity:0;
   transform:translateY(16px) scale(.94);
   transition:opacity .5s ease-out, transform .55s cubic-bezier(.34,1.56,.64,1), box-shadow .6s ease}
-.wn-card:nth-child(2){transition-delay:.08s}
-.wn-card:nth-child(3){transition-delay:.16s}
-.kq-wn.in .wn-card{opacity:1; transform:none}
+/* entrance curve left as this app's own cubic-bezier(.34,1.56,.64,1): it already
+   overshoots (spring-settles) more than the pitch's own entrance curve
+   (cubic-bezier(.16,1,.3,1), a smooth decelerate with no bounce at all), so "use the
+   pitch's curve if the current one feels stiff by comparison" doesn't apply - ours
+   isn't stiff next to it. */
+.wn-card:nth-child(2){transition-delay:.08s; --tilt:1.8deg}
+.wn-card:nth-child(3){transition-delay:.16s; --tilt:-2deg}
+.kq-wn.in .wn-card{opacity:1; transform:rotate(var(--tilt))}
 .wn-card .scene{width:100%; height:52px; border-radius:11px; display:flex; align-items:center;
   justify-content:center}
 .wn-card span{font-weight:600; font-size:12px; color:var(--ink); white-space:nowrap}
 .kq-wn.choose .wn-card:not(.wn-pick){opacity:.55}
-.kq-wn.choose .wn-pick{box-shadow:0 0 0 2px rgba(255,198,77,.5), 0 0 22px 4px rgba(255,198,77,.35),
-  0 10px 24px -14px rgba(0,0,0,.5); animation:kq-pickpop .5s cubic-bezier(.34,1.56,.64,1)}
-@keyframes kq-pickpop{0%{transform:scale(1)}40%{transform:scale(1.07,.94)}
-  70%{transform:scale(.98,1.03)}100%{transform:scale(1)}}
-/* .wn-pick .wn-pick-tag (not the bare class) - the tag is itself a <span>
-   nested inside .wn-card, so the plain .wn-card span{color:var(--ink)...}
-   rule above (specificity 0,1,1) would otherwise silently beat a bare
-   .wn-pick-tag{...} (0,1,0) on color/font-size/font-weight, leaving the
-   caption rendering as dark ink text instead of cream - found live in
-   Chrome while verifying this change, not visible from the CSS alone. */
-.wn-pick .wn-pick-tag{position:absolute; top:-22px; left:50%; display:flex; align-items:center;
-  gap:4px; font-weight:700; font-size:11px; color:var(--cream); white-space:nowrap; opacity:0;
-  transform:translateX(-50%) scale(.4);
-  transition:opacity .4s ease .15s, transform .4s cubic-bezier(.34,1.56,.64,1) .15s}
+/* .wn-card.wn-pick (not the bare .wn-pick used elsewhere below) - both classes are
+   always applied together (see startAllDone), and the extra class here beats
+   .kq-wn.in .wn-card's tied-specificity transform rule outright instead of leaning on
+   source order. scale(1.12) rotate(0) is the pitch's own "chosen" moment: the picked
+   card straightens out of its tilt and grows while the other two stay tilted and dim
+   (:not(.wn-pick) above, untouched). kq-pickpop below is retargeted from its old rest
+   state (scale(1)) to this new one so the pop doesn't snap on completion. */
+.kq-wn.choose .wn-card.wn-pick{box-shadow:0 0 0 2px rgba(255,198,77,.5), 0 0 22px 4px rgba(255,198,77,.35),
+  0 10px 24px -14px rgba(0,0,0,.5); transform:scale(1.12) rotate(0);
+  animation:kq-pickpop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes kq-pickpop{0%{transform:rotate(var(--tilt)) scale(1)}
+  40%{transform:rotate(calc(var(--tilt) * .3)) scale(1.2,1.05)}
+  70%{transform:rotate(calc(var(--tilt) * -.08)) scale(1.1,1.15)}
+  100%{transform:rotate(0) scale(1.12)}}
+/* teal pill badge, ported from the pitch's .wn-card em (proposal-src/
+   kidq-design-preview.html:267-271) - restored after an earlier cream-text pass, per
+   explicit user request pointing back at the pitch's own badge treatment a second
+   time. .wn-pick .wn-pick-tag (not the bare class): the tag is itself a <span>
+   nested inside .wn-card, so the plain .wn-card span{color:var(--ink)...} rule above
+   (specificity 0,1,1) would otherwise beat a bare .wn-pick-tag{...} (0,1,0) on
+   color/font-size/font-weight - same bug the cream version had, still live with this
+   selector shape, still needs the extra class to win it cleanly. White text/heart on
+   --teal measures 5.17:1 - passes the project's WCAG AA 4.5:1 small-text bar with
+   room to spare, so no darker teal swap was needed. */
+.wn-pick .wn-pick-tag{position:absolute; top:-13px; left:50%; display:flex; align-items:center;
+  gap:4px; font-weight:700; font-size:11px; letter-spacing:.02em; background:var(--teal); color:#fff;
+  white-space:nowrap; border-radius:99px; padding:4px 11px; box-shadow:0 3px 10px rgba(0,0,0,.35);
+  transform:translateX(-50%) scale(0);
+  transition:transform .45s cubic-bezier(.34,1.56,.64,1) .15s}
 .wn-pick-tag .kq-mheart{width:12px; height:12px}
-.kq-wn.choose .wn-pick .wn-pick-tag{opacity:1; transform:translateX(-50%) scale(1)}
+.kq-wn.choose .wn-pick .wn-pick-tag{transform:translateX(-50%) scale(1)}
+/* three drifting hearts, ported from the pitch's .wnheart h1/h2/h3 (proposal-src/
+   kidq-design-preview.html:277-284) - restored per explicit user request ("you
+   removed bubbles"), after the same earlier pass retired them along with the tilt.
+   Positions and the hfloat rise-and-fade loop are the pitch's own (h3's top:-6px
+   originally sat near the pitch's own circular .pickheart badge, which this port
+   drops - verified live it still clears our pill fine on its own). */
+.wnheart{position:absolute; width:18px; height:18px; opacity:0; pointer-events:none}
+.wnheart svg{display:block; width:100%; height:100%}
+.wnheart.h1{right:-11px; top:20px}
+.wnheart.h2{left:-12px; top:36px; width:14px; height:14px}
+.wnheart.h3{right:14px; top:-6px; width:15px; height:15px}
+.kq-wn.choose .wn-pick .wnheart{animation:hfloat 3.6s ease-in-out .3s infinite}
+.kq-wn.choose .wn-pick .h2{animation-delay:1.5s}
+.kq-wn.choose .wn-pick .h3{animation-delay:2.5s}
+@keyframes hfloat{0%{opacity:0; transform:none}15%{opacity:.95}
+  55%{opacity:0; transform:translate(5px,-19px) rotate(12deg)}100%{opacity:0; transform:translate(5px,-19px)}}
+/* pure decoration, not state - hidden outright under reduced motion rather than left
+   to the global animation-duration:.001ms kill: with the loop's iteration-count also
+   forced to 1, that resolves to the animation's own last keyframe (opacity:0) anyway,
+   but only because that keyframe happens to be transparent. This makes "hidden"
+   explicit instead of depending on that shape never changing. */
+.reduce-motion .wnheart{display:none}
 
 /* ---------- no session ---------- */
 .kq-moonside{position:absolute; right:44px; top:110px; width:94px; height:94px; border:none;
@@ -745,7 +1092,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
     height:10px; flex-shrink:0}
   .kq-quplabel{position:static; bottom:auto; margin-top:0; font-size:12px}
   .kq-qrow{position:static; bottom:auto; margin-top:2px}
-  .kq-qcard,.kq-qend{width:104px; height:58px; border-radius:12px}
+  .kq-qcard{width:104px; height:58px; border-radius:12px}
   .kq-qname{max-width:104px}
   #watch-queue{--stripcard:104px}
   .kq-bigpause{position:static; bottom:auto; margin-left:0}
@@ -774,11 +1121,13 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
      partial scale the desktop tier had, one step down. These are the
      midpoints between the base sizes and the 1100px ones, so the break
      screens now grow evenly across all three tiers. */
-  .kq-breathhead,.kq-findhead,.kq-followhead{font-size:34px}
+  .kq-breathhead,.kq-findhead,.kq-followhead,.kq-treehead,.kq-counthead{font-size:34px}
   .kq-findsub,.kq-followsub{font-size:17.5px}
   .kq-findsun{width:min(30cqw,154px)}
   .kq-ptsun{width:min(34cqw,184px)}
-  #screen-breathing .kq-bsunwrap{width:min(40cqw,214px)}
+  #screen-breathing .kq-bsunwrap,#screen-count .kq-bsunwrap{width:min(40cqw,214px)}
+  .kq-treestage{width:min(46cqw,228px)}
+  #screen-tree .kq-breakcount,#screen-count .kq-breakcount{--cnt:44px}
 }
 
 /* ---------- wide tier ---------- */
@@ -801,7 +1150,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   .kq-daybar{height:12px}
   .kq-quplabel{font-size:13px}
   .kq-qrow{gap:14px}
-  .kq-qcard,.kq-qend{width:120px; height:68px; border-radius:14px}
+  .kq-qcard{width:120px; height:68px; border-radius:14px}
   .kq-qname{max-width:120px}
   #watch-queue{--stripcard:120px}
   /* #screen-watching.wide's tablet-tier rules (601-1099px, above) are scoped
@@ -838,10 +1187,9 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   #screen-choice .kq-centercol{top:230px; gap:20px}
   .kq-pickhead{font-size:38px}
   #screen-choice .kq-qrow{gap:14px}
-  #screen-choice .kq-qcard,#screen-choice .kq-qend{width:120px; height:68px; border-radius:14px}
+  #screen-choice .kq-qcard{width:120px; height:68px; border-radius:14px}
   #screen-choice .kq-qname{max-width:120px}
-  #screen-choice .kq-qend{font-size:15px}
-  .kq-breathhead,.kq-findhead,.kq-followhead{font-size:38px}
+  .kq-breathhead,.kq-findhead,.kq-followhead,.kq-treehead,.kq-counthead{font-size:38px}
   .kq-swatchrow{gap:22px}
   .kq-swatchrow i{width:64px; height:64px}
   /* the sun and the sub-line take the same step the swatches do, so the game
@@ -855,7 +1203,10 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
      with the rest so the break screens grow as one piece either way, and so it
      stays larger than the seam's sun, which is the relationship the base sizes
      already set (40cqw/190 against 34cqw/160). */
-  #screen-breathing .kq-bsunwrap{width:min(40cqw,240px)}
+  #screen-breathing .kq-bsunwrap,#screen-count .kq-bsunwrap{width:min(40cqw,240px)}
+  .kq-treestage{width:min(46cqw,264px)}
+  .kq-treesun{width:min(16cqw,96px)}
+  #screen-tree .kq-breakcount,#screen-count .kq-breakcount{--cnt:54px}
 }
 
 /* ---------- reduced motion ---------- */

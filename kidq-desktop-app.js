@@ -229,6 +229,18 @@
     later(() => el.classList.remove(cls), 950);
   }
 
+  // Break-count digit balloon (shared, brand.md §5; user request 2026-09-15):
+  // cycles the same four splash hues, in the splash's own order, once per
+  // digit change - teal -> gold -> coral -> dusk -> repeat. Shared by tree
+  // (5-wide, wraps once per hold) and count (10-wide, wraps twice). One
+  // helper, called from both screens' own setXCount functions, so the cycle
+  // itself can never drift between them.
+  const BALLOON_HUES = ["teal", "gold", "coral", "dusk"];
+  function setBalloonHue(el, i) {
+    el.classList.remove(...BALLOON_HUES.map((h) => `hue-${h}`));
+    el.classList.add(`hue-${BALLOON_HUES[i % BALLOON_HUES.length]}`);
+  }
+
   /* ---------- session state (derived from KidQData only) ---------- */
   // progress: per-video furthest-watched fraction (0..1) — keeps the sun's
   // place when the child switches videos mid-way; watched = fully finished
@@ -246,10 +258,8 @@
      breaks draw from MOVE (child is still fresh), later ones from SETTLE (the
      day is winding down) — the same arc the sun itself travels.            */
   const BREAK_GAMES = {
-    move:   ["find"],
-    settle: ["breathe", "follow"]
-    // next round: "tree" (stand like a tree) joins move;
-    //             "count" joins settle
+    move:   ["find", "tree"],
+    settle: ["breathe", "follow", "count"]
   };
 
   // Returns the planned break points as fractions of the session's total
@@ -439,7 +449,7 @@
     KidQData.profiles.forEach((p) => {
       const btn = document.createElement("button");
       btn.className = "kq-who";
-      btn.setAttribute("aria-label", `${p.name} — tap to start your day`);
+      btn.setAttribute("aria-label", `${p.name} — touch to start your day`);
       btn.innerHTML = `<span class="facewrap"><span class="halo"></span>${faceSvg(p)}</span><span class="name">${p.name}</span>`;
       btn.addEventListener("click", () => {
         pop(btn);
@@ -671,7 +681,7 @@
   /* ---------- playtime seam + activity breaks ---------- */
   // A ternary only ever reaches two games. Every new break must land here or it
   // silently runs breathing.
-  const BREAK_START = { find: startFind, breathe: startBreathing, follow: startFollow };
+  const BREAK_START = { find: startFind, breathe: startBreathing, follow: startFollow, tree: startTree, count: startCount };
 
   function startPlaytimeSeam(forceGame) {
     video.pause();
@@ -785,13 +795,13 @@
       s.style.animation = "";
     });
     $("#find-headline").textContent = `Find 3 ${c.name} things!`;
-    $("#find-sub").textContent = "Look around the room. Tap the sun when you find them.";
+    $("#find-sub").textContent = "Look around the room. Touch the sun when you find them.";
     // said after showScreen below, so the screen is up before the voice starts
     // the sun is the control, so it is disabled rather than hidden - hiding it
     // would remove the mascot from the celebration
     $("#find-done").disabled = false;
     showScreen("screen-find");
-    later(() => say(`Find 3 ${c.name} things. Look around the room, and tap the sun when you find them.`), 600);
+    later(() => say(`Find 3 ${c.name} things. Look around the room, and touch the sun when you find them.`), 600);
   }
   $("#find-done").addEventListener("click", (e) => {
     if (findScreen.classList.contains("celebrate")) return;
@@ -1035,6 +1045,258 @@
     });
   }
 
+  /* --- MOVE: stand like a tree with the demonstrator (sourced Lottie character) ---
+     No screen input at all, by physical design: her arms are overhead and she's
+     balancing on one leg, so a tap mid-game would contradict the activity.
+     Everything here is timed - every phase below uses hold(), never later(),
+     spec's own rule since this break is all timers (spec §4). */
+  const treeScreen = $("#screen-tree");
+  const treeHeadline = $("#tree-headline");
+  const treeCountBalloon = $("#tree-count-balloon");
+  const treeCountBig = $("#tree-count-big");
+  const treeCountTrail = $("#tree-count-trail");
+  const treeDots = $$("#tree-dots i");
+  const treeStage = $("#tree-stage");
+  const treeLottieEl = $("#tree-lottie");
+
+  let treeAnim = null;
+  function initTree() {
+    if (treeAnim || !window.lottie || !window.KIDQ_TREE_ANIM) return;
+    treeScreen.classList.add("lottie-on");
+    treeAnim = lottie.loadAnimation({ container: treeLottieEl, renderer: "svg",
+      loop: true, autoplay: false, animationData: window.KIDQ_TREE_ANIM });
+  }
+
+  // The visible count is driven by the SAME hold chain as the spoken count, so
+  // they cannot drift apart (spec §4) - never animation-delay staggering.
+  // COUNT_STEP_MS are word-start offsets (ms, from the count clip's own
+  // start) read from edge-tts's --write-subtitles output for
+  // voice-tree-count.mp3 (en-IN-NeerjaNeural, --rate=-10%, matching follow's
+  // pipeline); COUNT_MS (7800) is that clip's own measured length (mutagen).
+  // The chain is tuned to this REAL clip, not the other way round - spec §5
+  // is explicit that the hold chain follows the measured audio, and at this
+  // unhurried a pace the real per-number gap runs ~1.4-1.7s, longer than the
+  // spec's own ~1.1s/number estimate (logged honestly, not forced to fit).
+  // BIG is the current number (the break-count digit pattern, brand.md);
+  // TRAIL is what's still coming, shown small and dimmed beside it.
+  const COUNT_BIG = ["5", "4", "3", "2", "1"];
+  const COUNT_TRAIL = ["4 · 3 · 2 · 1", "3 · 2 · 1", "2 · 1", "1", ""];
+  const COUNT_STEP_MS = [0, 1758, 3327, 4827, 6244];
+  const COUNT_MS = 7800;
+  // voice-tree-switch.mp3 measures 1.872s; hold past that so hold2's own
+  // sayLine call never fires while this phase's clip might still be playing.
+  const SWITCH_MS = 2100;
+  const SWITCH_FLIP_MS = 450; // "flip at the apex" of the ~900ms up/down bounce
+
+  // pop() (js, above) already does the remove/reflow/add + later() cleanup a
+  // retriggerable squash-stretch needs; later()'s 200ms cleanup clamp under
+  // reduced motion only delays removing the class, not the animation itself,
+  // which the global .reduce-motion rule already crushes to instant - so
+  // reduced motion needs no special-casing here (steer, 2026-09-15).
+  // Balloon (user request 2026-09-15): pop() now targets the BALLOON
+  // wrapper, not the bare glyph, so the whole balloon bounces in together;
+  // setBalloonHue cycles the splash's own four hues, teal->gold->coral->
+  // dusk, one step per digit.
+  function setTreeCount(i) {
+    treeCountBig.textContent = COUNT_BIG[i];
+    treeCountTrail.textContent = COUNT_TRAIL[i];
+    setBalloonHue(treeCountBalloon, i);
+    pop(treeCountBalloon);
+  }
+
+  function treeCount(onDone) {
+    for (let i = 1; i < COUNT_BIG.length; i++) {
+      hold(() => setTreeCount(i), COUNT_STEP_MS[i]);
+    }
+    hold(onDone, COUNT_MS);
+  }
+
+  function treeSwitchLeg() {
+    sayLine($("#voice-tree-switch"), "Other leg!");
+    if (reducedMotion) {
+      // Crossfade, no bounce (spec §6): fade out, flip the mirror + still
+      // frame while invisible, fade back in - the same "never an untracked
+      // glide" shape follow's placeHidden uses, just for a pose swap instead
+      // of a position swap.
+      treeStage.classList.add("crossfade");
+      hold(() => {
+        treeLottieEl.classList.add("mirrored");
+        if (treeAnim) treeAnim.goToAndStop(0, true);
+      }, 300);
+      hold(() => treeStage.classList.remove("crossfade"), 600);
+    } else {
+      treeStage.classList.add("flipping");
+      hold(() => treeLottieEl.classList.add("mirrored"), SWITCH_FLIP_MS);
+      hold(() => treeStage.classList.remove("flipping"), 900);
+    }
+    hold(runHold2, SWITCH_MS);
+  }
+
+  function runHold1() {
+    setTreeCount(0);
+    sayLine($("#voice-tree-count"), "5… 4… 3… 2… 1!");
+    treeCount(() => {
+      treeDots[0]?.classList.add("on");
+      treeStage.classList.add("settle"); // she steadies to upright between holds
+      treeSwitchLeg();
+    });
+  }
+
+  function runHold2() {
+    treeStage.classList.remove("settle");
+    setTreeCount(0);
+    sayLine($("#voice-tree-count"), "5… 4… 3… 2… 1!");
+    treeCount(() => {
+      treeDots[1]?.classList.add("on");
+      treeStage.classList.add("settle");
+      celebrateTree();
+    });
+  }
+
+  function celebrateTree() {
+    treeScreen.classList.add("celebrate");
+    treeHeadline.textContent = "You did it! ✨";
+    treeCountBig.textContent = "";
+    treeCountTrail.textContent = "";
+    sayLine($("#voice-follow-done"), "You did it!");
+    safePlay(chime);
+    // hold(), not later(): matches every other break's celebration exit.
+    hold(startChoice, 1900);
+  }
+
+  const TREE_INTRO_MS = 6360; // measured voice-tree-intro.mp3 length (mutagen)
+
+  function startTree() {
+    showScreen("screen-tree");
+    initTree();
+    treeScreen.classList.remove("celebrate");
+    treeStage.classList.remove("flipping", "crossfade", "settle");
+    treeLottieEl.classList.remove("mirrored");
+    treeDots.forEach((d) => d.classList.remove("on"));
+    treeHeadline.textContent = "Stand like a tree with me!";
+    treeCountBalloon.classList.remove("tapped");
+    setBalloonHue(treeCountBalloon, 0); // every fresh run starts back at teal
+    treeCountBig.textContent = COUNT_BIG[0];
+    treeCountTrail.textContent = COUNT_TRAIL[0];
+    if (treeAnim) {
+      if (reducedMotion) treeAnim.goToAndStop(0, true);
+      else treeAnim.play();
+    }
+    hold(() => sayLine($("#voice-tree-intro"), "Stand like a tree with me! Arms up, one foot on your leg."), 600);
+    hold(runHold1, 600 + TREE_INTRO_MS);
+  }
+
+  /* --- SETTLE: count to ten, eyes closed ---
+     No input at all (spec 2026-09-15 kidq-count-to-ten-break-design.md §1):
+     eyes are closed, so a tap would contradict the activity - everything
+     here is timed, same discipline as tree pose. Donor: BREATHING's own
+     .bsun dual-group eye markup (css, #screen-breathing .bsun .eyesClosed
+     etc.) - the only sun with a working eye TOGGLE. The sunrise sun's eyes
+     were rejected as a donor (spec §2): its unscoped .eyes-awake{opacity:0}
+     only lifts under .screen.risen, which #screen-count never gets, so
+     "Open your eyes!" would render no eyes at all. */
+  const countScreen = $("#screen-count");
+  const countHeadline = $("#count-headline");
+  const countBalloon = $("#count-balloon");
+  const countBig = $("#count-big");
+  const countTrail = $("#count-trail");
+
+  // Ten spoken numbers, ten SEPARATE clips (spec §4) - not one multi-word
+  // track like tree's own count clip. Per-number clips let the hold chain
+  // trigger each one at its own tick, so digits and audio stay in step even
+  // on the device-TTS fallback (a single ~19s clip can't be paced, and
+  // say() would finish early); no clip is ever still playing under the next
+  // beat, since hush() (countTick, below) retires it first every time.
+  // Named TEN_* rather than tree's own COUNT_* (kidq-desktop-app.js above)
+  // to avoid redeclaring those consts in this shared module scope.
+  const TEN_WORDS = ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"];
+  const TEN_BIG = TEN_WORDS.map((_, i) => String(i + 1));
+  // The WALKED-THROUGH numbers trail behind the current big digit (spec §1)
+  // - the opposite direction from tree's own countdown trail, which
+  // previews what's still coming. Same " · " join tree uses - the width
+  // risk spec §1 names explicitly ("one orphaned '· 10' away from wrapping"
+  // at the 390px tier) turned out not to need a thinner separator once
+  // measured: the worst case (big="10", all nine numbers trailing) scrolls
+  // to 180px against 330px usable at the narrowest tier (§8.1), so the
+  // shared punctuation stays. font-variant-numeric:tabular-nums (css:
+  // #screen-count .kq-breakcount-trail) keeps that measurement stable as
+  // the digits themselves change width.
+  const TEN_TRAIL = TEN_BIG.map((_, i) => TEN_BIG.slice(0, i).join(" · "));
+  const TEN_CLIPS = TEN_WORDS.map((_, i) => $(`#voice-count-${i + 1}`));
+
+  // voice-count-1..10.mp3 (edge-tts en-IN-NeerjaNeural --rate=-10%, same
+  // pipeline/rate as follow and tree, confirmed against commit e7fa524) all
+  // measure 1.872s (mutagen) - so the tick chain's own spacing IS the clip
+  // length: "chain follows audio" (spec §1), each number given room to
+  // finish before the next starts, hush() the safety net if a device ever
+  // runs slow. voice-count-intro.mp3 measures 3.696s. voice-count-open.mp3
+  // measures 2.280s; TEN_OPEN_MS adds a ~220ms buffer (same reasoning as
+  // tree's own SWITCH_MS cushion) so the open line has time to finish
+  // before the celebration's own sayLine call could ever collide with it.
+  const TEN_INTRO_MS = 3696;
+  const TEN_TICK_MS = 1872;
+  const TEN_OPEN_MS = 2500;
+
+  function setTenDigit(i) {
+    countBig.textContent = TEN_BIG[i];
+    countTrail.textContent = TEN_TRAIL[i];
+    setBalloonHue(countBalloon, i); // splash's own four hues, one step per tick
+    // Quieter than tree's pop() (spec §1: "the entrance is a slow pulse,
+    // not a bounce" - count is the settle game) - and, since the balloon
+    // build (2026-09-15), a float rather than a scale-pulse: "drifting
+    // gently up into place... slow float, no bounce", per the design brief.
+    // Targets the BALLOON wrapper now, not the bare glyph, so the whole
+    // balloon floats in together. Own remove/reflow/add dance (find's own
+    // re-entrancy pattern, css:781-785) rather than widening pop()'s two
+    // hardcoded class names for a third animation only this screen uses.
+    countBalloon.classList.remove("pulse");
+    void countBalloon.offsetWidth;
+    countBalloon.classList.add("pulse");
+    later(() => countBalloon.classList.remove("pulse"), 550); // kq-balloonfloat is 450ms; 100ms cleanup buffer, same proportion the old kq-countpulse kept (300ms anim / 350ms cleanup)
+  }
+
+  function countTick(i) {
+    setTenDigit(i);
+    hush(); // every tick's own line (spec §3): retires whatever came before
+    sayLine(TEN_CLIPS[i], TEN_WORDS[i]);
+  }
+
+  function runTenCount() {
+    countTick(0);
+    for (let i = 1; i < TEN_BIG.length; i++) hold(() => countTick(i), i * TEN_TICK_MS);
+    hold(openTenEyes, TEN_BIG.length * TEN_TICK_MS);
+  }
+
+  function openTenEyes() {
+    countScreen.classList.remove("dim");
+    hush();
+    sayLine($("#voice-count-open"), "Open your eyes!");
+    hold(celebrateCount, TEN_OPEN_MS);
+  }
+
+  function celebrateCount() {
+    countScreen.classList.add("celebrate");
+    countHeadline.textContent = "You did it! ✨";
+    countBig.textContent = "";
+    countTrail.textContent = "";
+    sayLine($("#voice-follow-done"), "You did it!"); // shared ending clip, spec §4/§7.1
+    safePlay(chime);
+    hold(startChoice, 1900); // matches every other break's celebration exit
+  }
+
+  function startCount() {
+    showScreen("screen-count");
+    countScreen.classList.remove("celebrate");
+    countScreen.classList.add("dim"); // sky dims + sun's eyes close, one state class (spec §2)
+    countHeadline.textContent = "Close your eyes — count with me!";
+    countBalloon.classList.remove("pulse");
+    setBalloonHue(countBalloon, 0); // every fresh run starts back at teal
+    countBig.textContent = TEN_BIG[0];
+    countTrail.textContent = "";
+    hold(() => sayLine($("#voice-count-intro"), "Close your eyes… and count with me!"), 600);
+    hold(runTenCount, 600 + TEN_INTRO_MS);
+  }
+
   /* ---------- after-break choice (within the parent's picks) ---------- */
   const choiceScreen = $("#screen-choice");
   const choiceSun = $("#choice-sun");
@@ -1059,10 +1321,10 @@
   // jump away from this screen - both already wipe whatever hold() is
   // pending, CHOICE_AUTO_MS's or this one's, exactly the same way.
   //
-  // Audio placeholder: there's no recorded "Tap the sun for your next video"
+  // Audio placeholder: there's no recorded "Touch the sun for your next video"
   // line in the repo - voice-follow-intro/-done are follow-the-sun specific -
   // so this reuses the soft sunset chime for now. TODO(production): record a
-  // spoken "Tap the sun for your next video" line for pre-readers, in the
+  // spoken "Touch the sun for your next video" line for pre-readers, in the
   // same voice as the other clips, and play it here via sayLine() the way
   // startFollow does for its own intro line.
   const NUDGE_FIRST_MS = 7000, NUDGE_REPEAT_MS = 15000;
@@ -1175,11 +1437,17 @@
     KidQData.whatsNext.forEach((item) => {
       const card = document.createElement("div");
       card.className = "wn-card" + (item.picked ? " wn-pick" : "");
-      // the pick's caption reuses the heart-line vocabulary (beating coral heart
-      // + "who picked" text) from the pitch's badge, re-skinned calm: no pill,
-      // no floating hearts - same rule as every port from the proposal file
+      // The pick's badge, tilt and drifting hearts are the pitch's own treatment
+      // (proposal-src/kidq-design-preview.html), restored here per explicit user
+      // request after an earlier pass had re-skinned them calm (cream caption, no
+      // tilt, no hearts). The one thing that stays retired either way: the pitch's
+      // separate circular .pickheart badge - never asked for, would crowd the pill.
       card.innerHTML = `<div class="scene">${SCENES[item.scene] || ""}</div><span>${item.label}</span>` +
-        (item.picked ? `<span class="wn-pick-tag"><svg class="kq-mheart" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg>${item.pickedBy || "Mumma & Papa"}'s pick</span>` : "");
+        (item.picked ? `<span class="wn-pick-tag"><svg class="kq-mheart" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="currentColor"/></svg>${item.pickedBy || "Mumma & Papa"}'s pick</span>` +
+          `<span class="wnheart h1" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg></span>` +
+          `<span class="wnheart h2" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg></span>` +
+          `<span class="wnheart h3" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg></span>`
+        : "");
       row.appendChild(card);
     });
     showScreen("screen-all-done");

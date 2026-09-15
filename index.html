@@ -118,7 +118,7 @@
             <path d="M24.5 34.5 Q30 39 35.5 34.5" fill="none" stroke="#2E2A24" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
         </button>
-        <p class="kq-tapline"><span class="base">Tap the sun to start your day</span><span class="alt">Here comes your day! ☀️</span></p>
+        <p class="kq-tapline"><span class="base">Touch the sun to start your day</span><span class="alt">Here comes your day! ☀️</span></p>
         <p class="kq-heartline">
           <svg class="kq-mheart" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg>
           <span id="sunrise-heartline"><b>Mumma &amp; Papa picked 4 videos</b> · 30 min</span>
@@ -271,7 +271,7 @@
           </svg>
         </button>
         <div class="kq-swatchrow" id="find-swatches" aria-hidden="true"><i></i><i></i><i></i></div>
-        <p class="kq-findsub" id="find-sub">Look around the room. Tap the sun when you find them.</p>
+        <p class="kq-findsub" id="find-sub">Look around the room. Touch the sun when you find them.</p>
       </div>
     </div>
   </section>
@@ -297,6 +297,94 @@
           <span class="m-full">Keep your head still — just your eyes</span><span class="m-reduced">Find it each time it hops</span>
         </p>
         <div class="kq-bdots" id="follow-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MOVE: stand like a tree with the demonstrator -->
+  <section class="screen" id="screen-tree" aria-label="Stand like a tree break">
+    <div class="kq-sky">
+      <span class="kq-ptpill slot">Playtime!</span>
+      <svg class="kq-sidetree kq-sidetree--l" style="animation-delay:-1.4s" aria-hidden="true" viewBox="0 0 70 130">
+        <rect x="30" y="78" width="9" height="48" rx="4" fill="#6B6459"/>
+        <circle cx="34" cy="60" r="24" fill="#1F7A6D"/>
+        <circle cx="18" cy="74" r="16" fill="#1F7A6D"/>
+        <circle cx="50" cy="72" r="17" fill="#1F7A6D"/>
+      </svg>
+      <svg class="kq-sidetree kq-sidetree--r" style="animation-delay:-3.1s" aria-hidden="true" viewBox="0 0 70 130">
+        <rect x="31" y="86" width="8" height="40" rx="4" fill="#6B6459"/>
+        <circle cx="35" cy="70" r="20" fill="#1F7A6D"/>
+        <circle cx="21" cy="82" r="13" fill="#1F7A6D"/>
+        <circle cx="49" cy="80" r="14" fill="#1F7A6D"/>
+      </svg>
+      <div class="kq-centercol" style="gap:14px">
+        <h1 class="kq-treehead" id="tree-headline" aria-live="polite">Stand like a tree with me!</h1>
+        <div class="kq-treescene">
+          <div class="kq-treestage" id="tree-stage">
+            <div class="kq-treelottie" id="tree-lottie" aria-hidden="true"></div>
+            <div class="kq-bsunwrap kq-treesun" id="tree-sun" aria-hidden="true">
+              <span class="halo"></span>
+              <svg class="bsun" style="transform:none" viewBox="0 0 60 60" aria-hidden="true">
+                <g class="rays"><line x1="30" y1="1.5" x2="30" y2="9.5"/><line x1="50" y1="30" x2="58.5" y2="30"/><line x1="44" y1="16" x2="50" y2="10"/><line x1="44" y1="44" x2="50" y2="50"/><line x1="30" y1="50.5" x2="30" y2="58.5"/><line x1="10" y1="50" x2="16" y2="44"/><line x1="1.5" y1="30" x2="10" y2="30"/><line x1="10" y1="10" x2="16" y2="16"/></g>
+                <circle cx="30" cy="30" r="16.5" fill="#FFC64D"/>
+                <circle class="eye" cx="24.5" cy="28" r="1.9" fill="#2E2A24"/><circle class="eye" cx="35.5" cy="28" r="1.9" fill="#2E2A24"/>
+                <path d="M24.5 34.5 Q30 39 35.5 34.5" fill="none" stroke="#2E2A24" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+        <!-- break-count digit balloon pattern (brand.md §5): the live count is
+             out of aria-live spam - the headline above is the sole accessible
+             carrier, this whole cluster is aria-hidden. The balloon (body/
+             knot/string) is pure decoration around the digit - the digit text
+             itself is what the pattern actually counts on. -->
+        <div class="kq-breakcount" id="tree-count" aria-hidden="true">
+          <span class="kq-digitballoon hue-teal" id="tree-count-balloon">
+            <span class="kq-balloon-body"></span>
+            <span class="kq-balloon-knot"></span>
+            <span class="kq-balloon-string"></span>
+            <span class="kq-breakcount-big" id="tree-count-big">5</span>
+          </span>
+          <span class="kq-breakcount-trail" id="tree-count-trail">4 · 3 · 2 · 1</span>
+        </div>
+        <div class="kq-bdots" id="tree-dots" aria-hidden="true"><i></i><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTLE: count to ten, eyes closed -->
+  <section class="screen" id="screen-count" aria-label="Count to ten break">
+    <div class="kq-sky">
+      <div class="kq-duskveil"></div>
+      <span class="kq-ptpill slot">Playtime!</span>
+      <div class="kq-centercol">
+        <h1 class="kq-counthead" id="count-headline" aria-live="polite">Close your eyes — count with me!</h1>
+        <div class="kq-bsunwrap kq-countsun" id="count-sun" aria-hidden="true">
+          <span class="halo"></span>
+          <svg class="bsun" style="transform:none" viewBox="0 0 60 60" aria-hidden="true">
+            <g class="rays"><line x1="30" y1="1.5" x2="30" y2="9.5"/><line x1="50" y1="30" x2="58.5" y2="30"/><line x1="44" y1="16" x2="50" y2="10"/><line x1="44" y1="44" x2="50" y2="50"/><line x1="30" y1="50.5" x2="30" y2="58.5"/><line x1="10" y1="50" x2="16" y2="44"/><line x1="1.5" y1="30" x2="10" y2="30"/><line x1="10" y1="10" x2="16" y2="16"/></g>
+            <circle cx="30" cy="30" r="16.5" fill="#FFC64D"/>
+            <g class="eyesOpen" fill="#2E2A24"><circle class="eye" cx="24.5" cy="28" r="1.9"/><circle class="eye" cx="35.5" cy="28" r="1.9"/></g>
+            <g class="eyesClosed" stroke="#2E2A24" stroke-width="2" fill="none" stroke-linecap="round">
+              <path d="M21.5 28.5 q3 2.6 6 0"/><path d="M32.5 28.5 q3 2.6 6 0"/>
+            </g>
+            <path d="M24.5 34.5 Q30 39 35.5 34.5" fill="none" stroke="#2E2A24" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <!-- break-count digit balloon pattern (brand.md §5): walked-through
+             numbers trail behind the current big one, dimmed - aria-hidden,
+             the headline above carries the accessible experience (spec §1).
+             The balloon floats in per tick (no bounce - this is the settle
+             game); it's pure decoration around the digit. -->
+        <div class="kq-breakcount" id="count-count" aria-hidden="true">
+          <span class="kq-digitballoon hue-teal" id="count-balloon">
+            <span class="kq-balloon-body"></span>
+            <span class="kq-balloon-knot"></span>
+            <span class="kq-balloon-string"></span>
+            <span class="kq-breakcount-big" id="count-big">1</span>
+          </span>
+          <span class="kq-breakcount-trail" id="count-trail"></span>
+        </div>
       </div>
     </div>
   </section>
@@ -327,7 +415,7 @@
         <div><h1 class="name" id="choice-name">Aarav's watch time</h1><p class="sub" id="choice-count">2 videos to go</p></div>
       </div>
       <div class="kq-centercol">
-        <h2 class="kq-pickhead">Tap the sun for your next video</h2>
+        <h2 class="kq-pickhead">Touch the sun for your next video</h2>
         <p class="kq-picksub">
           <svg class="kq-mheart" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg>
           <span>or pick one of Mumma &amp; Papa's videos</span>
@@ -345,22 +433,26 @@
       <span class="kq-star" style="left:66%; top:26%; animation-delay:-2.5s"></span>
       <span class="kq-star" style="left:22%; top:34%; animation-delay:-.7s; width:3px; height:3px"></span>
       <span class="kq-star" style="left:12%; top:58%; animation-delay:-1.9s"></span>
-      <button class="kq-moontop" id="done-moon" aria-label="Sleepy moon">
-        <span class="kq-moonhalo"></span>
-        <svg class="kq-moon" viewBox="0 0 64 64" aria-hidden="true">
-          <circle cx="32" cy="32" r="26" fill="#FAF4E8"/><circle cx="21" cy="24" r="4" fill="#E4D6B8"/>
-          <circle cx="42" cy="43" r="3" fill="#E4D6B8"/>
-          <g class="m-sleepy" stroke="#6B6459" stroke-width="2" fill="none" stroke-linecap="round">
-            <path d="M23 31 q3 2.5 6 0"/><path d="M35 31 q3 2.5 6 0"/>
-            <path d="M27 39.5 Q32 43.5 37 39.5"/>
-          </g>
-          <g class="m-awake">
-            <circle cx="26" cy="30.5" r="2.5" fill="#6B6459"/><circle cx="38" cy="30.5" r="2.5" fill="#6B6459"/>
-            <path d="M26 38 Q32 44.5 38 38" stroke="#6B6459" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-          </g>
-        </svg>
-      </button>
-      <div class="kq-centercol" style="gap:24px; padding-top:120px">
+      <div class="kq-centercol" style="gap:24px">
+        <!-- moon lives in the flex flow (like night-light's .kq-nlmoon), not pinned at a
+             fixed top offset - that let it collide with the headline below it on short
+             viewports, since only width has a responsive breakpoint system here, not
+             height. Flow + gap guarantees separation at every size. -->
+        <button class="kq-moontop" id="done-moon" aria-label="Sleepy moon">
+          <span class="kq-moonhalo"></span>
+          <svg class="kq-moon" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="26" fill="#FAF4E8"/><circle cx="21" cy="24" r="4" fill="#E4D6B8"/>
+            <circle cx="42" cy="43" r="3" fill="#E4D6B8"/>
+            <g class="m-sleepy" stroke="#6B6459" stroke-width="2" fill="none" stroke-linecap="round">
+              <path d="M23 31 q3 2.5 6 0"/><path d="M35 31 q3 2.5 6 0"/>
+              <path d="M27 39.5 Q32 43.5 37 39.5"/>
+            </g>
+            <g class="m-awake">
+              <circle cx="26" cy="30.5" r="2.5" fill="#6B6459"/><circle cx="38" cy="30.5" r="2.5" fill="#6B6459"/>
+              <path d="M26 38 Q32 44.5 38 38" stroke="#6B6459" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+            </g>
+          </svg>
+        </button>
         <h1 class="kq-donehead base">All done for<br>today!</h1>
         <h1 class="kq-donehead gn" id="done-gn">Bye bye,<br>Aarav! 👋</h1>
         <button class="kq-hifive" id="high-five" aria-label="High five!">
@@ -519,7 +611,7 @@
       <div class="kq-centercol" style="gap:26px">
         <h1 class="kq-donehead" id="night-greet">Bye bye,<br>Aarav!</h1>
         <p class="kq-nsask"><span>The sun will be back tomorrow ☀️</span></p>
-        <button class="kq-nlmoon" id="night-moon" aria-label="Night light — tap to turn on or off" aria-pressed="false">
+        <button class="kq-nlmoon" id="night-moon" aria-label="Night light — touch to turn on or off" aria-pressed="false">
           <span class="kq-moonhalo"></span>
           <span class="halo3w"></span>
           <span class="kq-zz" style="right:2px; top:-4px; font-size:22px">z</span>
@@ -532,7 +624,7 @@
             <path d="M27 39.5 Q32 43.5 37 39.5" stroke="#6B6459" stroke-width="2" fill="none" stroke-linecap="round"/>
           </svg>
         </button>
-        <p class="kq-nlhint"><span class="off-txt">Tap the moon for your night light</span><span class="lit-txt">Night light on · tap the moon to turn it off</span></p>
+        <p class="kq-nlhint"><span class="off-txt">Touch the moon for your night light</span><span class="lit-txt">Night light on · touch the moon to turn it off</span></p>
       </div>
     </div>
   </section>
@@ -595,6 +687,8 @@
   <button data-break="breathe">Break: breathe</button>
   <button data-break="find">Break: find 3</button>
   <button data-break="follow">Break: follow sun</button>
+  <button data-break="tree">Break: tree</button>
+  <button data-break="count">Break: count</button>
   <button data-sky="0.08">Sun: rise</button>
   <button data-sky="0.5">Sun: midday</button>
   <button data-sky="0.95" data-dusk="1">Sun: sunset</button>
@@ -609,10 +703,26 @@
 <audio id="chime" src="proposal-src/sunset-chime.mp3" preload="auto"></audio>
 <audio id="voice-follow-intro" src="proposal-src/voice-follow-intro.mp3" preload="auto"></audio>
 <audio id="voice-follow-done" src="proposal-src/voice-follow-done.mp3" preload="auto"></audio>
+<audio id="voice-tree-intro" src="proposal-src/voice-tree-intro.mp3" preload="auto"></audio>
+<audio id="voice-tree-count" src="proposal-src/voice-tree-count.mp3" preload="auto"></audio>
+<audio id="voice-tree-switch" src="proposal-src/voice-tree-switch.mp3" preload="auto"></audio>
+<audio id="voice-count-intro" src="proposal-src/voice-count-intro.mp3" preload="auto"></audio>
+<audio id="voice-count-1" src="proposal-src/voice-count-1.mp3" preload="auto"></audio>
+<audio id="voice-count-2" src="proposal-src/voice-count-2.mp3" preload="auto"></audio>
+<audio id="voice-count-3" src="proposal-src/voice-count-3.mp3" preload="auto"></audio>
+<audio id="voice-count-4" src="proposal-src/voice-count-4.mp3" preload="auto"></audio>
+<audio id="voice-count-5" src="proposal-src/voice-count-5.mp3" preload="auto"></audio>
+<audio id="voice-count-6" src="proposal-src/voice-count-6.mp3" preload="auto"></audio>
+<audio id="voice-count-7" src="proposal-src/voice-count-7.mp3" preload="auto"></audio>
+<audio id="voice-count-8" src="proposal-src/voice-count-8.mp3" preload="auto"></audio>
+<audio id="voice-count-9" src="proposal-src/voice-count-9.mp3" preload="auto"></audio>
+<audio id="voice-count-10" src="proposal-src/voice-count-10.mp3" preload="auto"></audio>
+<audio id="voice-count-open" src="proposal-src/voice-count-open.mp3" preload="auto"></audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js"></script>
 <script src="kidq-hifive-anim.js"></script>
 <script src="kidq-breathe-anim.js"></script>
+<script src="kidq-tree-anim.js"></script>
 <script src="kidq-desktop-app.js"></script>
 
 </body>
