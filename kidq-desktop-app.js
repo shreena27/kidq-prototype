@@ -322,7 +322,7 @@
     sunrise.classList.remove("risen", "tapped");
     $("#screen-all-done").classList.remove("hifived");
     $("#whatsnext").classList.remove("in", "choose");
-    $("#sunrise-greet").innerHTML = `Good morning,<br>${state.profile.name}!`;
+    $("#sunrise-greet").innerHTML = `Hi,<br>${state.profile.name}!`;
     const s = state.session;
     $("#sunrise-heartline").innerHTML = s.replay
       ? `<b>Yesterday's videos, one more time</b> · ${s.totalMinutes} min`
@@ -841,6 +841,7 @@
   /* ---------- after-break choice (within the parent's picks) ---------- */
   const choiceScreen = $("#screen-choice");
   const choiceSun = $("#choice-sun");
+  const CHOICE_AUTO_MS = 4000; // item 25: choice screen self-advances if no tap. ~4s is a starting point to tune against a real child.
   function startChoice() {
     // No video left: the day is over, and the decided flow ends at the moon -
     // sunset, then the all-done screen. A choice screen with nothing to choose
@@ -874,6 +875,9 @@
       row.appendChild(wrap);
     });
     showScreen("screen-choice");
+    // No jingle: the jingle marks a child's choice, and this isn't one. A card tap
+    // runs startWatching -> showScreen -> clearTimers, which cancels this pending timer.
+    hold(() => { const next = unwatched()[0]; if (next) startWatching(next); }, CHOICE_AUTO_MS);
   }
   choiceSun.addEventListener("click", () => {
     if (!choiceScreen.classList.contains("active")) return;
@@ -898,6 +902,23 @@
     book: `<svg viewBox="0 0 88 52"><rect width="88" height="52" rx="11" fill="#F2E9D8"/><path d="M28 16 h14 v22 h-14 z" fill="#1F7A6D"/><path d="M44 16 h14 v22 h-14 z" fill="#FFC64D"/><path d="M43 16 v22" stroke="#2E2A24" stroke-width="1.6"/></svg>`,
     moon: `<svg viewBox="0 0 88 52"><rect width="88" height="52" rx="11" fill="#2B2955"/><circle cx="46" cy="26" r="12" fill="#FAF4E8"/><circle cx="41" cy="22" r="2.4" fill="#E4D6B8"/><circle cx="50" cy="30" r="1.8" fill="#E4D6B8"/><circle cx="20" cy="12" r="1.6" fill="#FAF4E8"/><circle cx="72" cy="38" r="1.6" fill="#FAF4E8"/></svg>`
   };
+  // Same "nothing waits forever without a tap" rule as item 25's choice screen:
+  // a young child may not reliably land the five, so the celebration also fires
+  // on its own after a wait. Unlike item 25's jingle (which specifically marks a
+  // child's OWN choice), the chime here already plays on other non-tap moments
+  // elsewhere in the app (e.g. startSunset), so it stays on for the auto path too
+  // - the day still earns its send-off whether or not the five landed.
+  const HIFIVE_AUTO_MS = 4000; // starting point to tune against a real child, same as item 25
+  function fiveUp() {
+    if (allDone.classList.contains("hifived")) return;
+    allDone.classList.add("hifived");
+    if (hfAnim) {
+      if (reducedMotion) hfAnim.goToAndStop(HF_DONE_POSE, true);
+      else hfAnim.playSegments([[HF_IDLE, HF_END]], true); // the clap + floating dots
+    }
+    safePlay(chime);
+    pop($("#done-moon"), true); // the moon wakes up and wobbles back at you
+  }
   function startAllDone() {
     allDone.classList.remove("hifived");
     initHifive();
@@ -906,7 +927,7 @@
       if (reducedMotion) hfAnim.goToAndStop(HF_IDLE, true);
       else hfAnim.playSegments([[0, HF_IDLE]], true);
     }
-    $("#done-gn").innerHTML = `Good night,<br>${state.profile ? state.profile.name : "Aarav"}! 🌙`;
+    $("#done-gn").innerHTML = `Bye bye,<br>${state.profile ? state.profile.name : "Aarav"}! 👋`;
     const wn = $("#whatsnext");
     wn.classList.remove("in", "choose");
     const row = $("#wn-row");
@@ -921,17 +942,18 @@
     showScreen("screen-all-done");
     later(() => wn.classList.add("in"), 700);
     later(() => wn.classList.add("choose"), 2700);
+    // hold(), not later(): later() clamps to 200ms under reduced motion, which
+    // would make the five impossible to catch - same reasoning as item 25's
+    // CHOICE_AUTO_MS. showScreen()'s own clearTimers() above would wipe a timer
+    // scheduled before it, so this is scheduled after, matching the two later()
+    // calls right above it.
+    hold(fiveUp, HIFIVE_AUTO_MS);
   }
-  $("#high-five").addEventListener("click", () => {
-    if (allDone.classList.contains("hifived")) return;
-    allDone.classList.add("hifived");
-    if (hfAnim) {
-      if (reducedMotion) hfAnim.goToAndStop(HF_DONE_POSE, true);
-      else hfAnim.playSegments([[HF_IDLE, HF_END]], true); // the clap + floating dots
-    }
-    safePlay(chime);
-    pop($("#done-moon"), true); // the moon wakes up and wobbles back at you
-  });
+  // fiveUp() re-checks the "hifived" guard itself, so if the child already
+  // tapped before this timer fires, the auto path is a harmless no-op - no
+  // separate cancellation needed (unlike item 25, there's no showScreen() call
+  // on tap here to run clearTimers() for us).
+  $("#high-five").addEventListener("click", fiveUp);
   $("#done-moon").addEventListener("click", (e) => pop(e.currentTarget, true));
 
   /* ---------- no session ---------- */
@@ -980,7 +1002,7 @@
     if (name === "sunrise") { prepSession("aarav"); startSunrise(); }
     if (name === "no-session") { prepSession("meera"); startNoSession(); }
     if (name === "night-light") {
-      $("#night-greet").innerHTML = `Good night,<br>${state.profile ? state.profile.name : "Aarav"}!`;
+      $("#night-greet").innerHTML = `Bye bye,<br>${state.profile ? state.profile.name : "Aarav"}!`;
       showScreen("screen-night-light");
       markDemo("night-light");
     }
