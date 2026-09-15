@@ -18,7 +18,11 @@
 
   <!-- splash -->
   <section class="screen" id="screen-splash" aria-label="KidQ is opening">
-    <div class="kq-sky kq-sky--predawn">
+    <!-- Night sky (not predawn): sets up the sky-as-timer arc (night here
+         -> the sunrise screen's "Touch the sun to start your day") and
+         measures better for the KidQ letters' own gradient than predawn did
+         (brand.md §5, splash-backdrop bullet). -->
+    <div class="kq-sky kq-sky--night">
       <span class="kq-star" style="left:15%; top:8%"></span>
       <span class="kq-star" style="left:82%; top:12%; animation-delay:-1.2s; width:3px; height:3px"></span>
       <span class="kq-star" style="left:62.7%; top:4.1%; animation-delay:-2.57s; width:2px; height:2px"></span>
@@ -45,6 +49,10 @@
       <span class="kq-star" style="left:27.2%; top:13.6%; animation-delay:-1.57s; width:3px; height:3px"></span>
       <svg class="kq-cloud" style="top:18%; animation-delay:-8s" width="70" height="30" viewBox="0 0 70 30"><ellipse cx="35" cy="21" rx="34" ry="8" fill="#C9B8E8" opacity=".7"/><circle cx="17" cy="15" r="9.5" fill="#C9B8E8" opacity=".65"/><circle cx="36" cy="10" r="12" fill="#C9B8E8" opacity=".65"/><circle cx="54" cy="14" r="9" fill="#C9B8E8" opacity=".65"/><path d="M16.5 13.5 q1.7 1.3 3.4 0" stroke="#6B6459" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M22.5 13.5 q1.7 1.3 3.4 0" stroke="#6B6459" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M17 17.5 Q21 19.5 25 17.5" stroke="#6B6459" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
       <svg class="kq-cloud c2" style="top:28%" width="54" height="24" viewBox="0 0 54 24"><ellipse cx="27" cy="17" rx="26" ry="6.5" fill="#C9B8E8" opacity=".68"/><circle cx="14" cy="12" r="7.5" fill="#C9B8E8" opacity=".62"/><circle cx="29" cy="8" r="9" fill="#C9B8E8" opacity=".62"/><circle cx="43" cy="11" r="6.8" fill="#C9B8E8" opacity=".62"/><path d="M11 11.5 q1.3 1 2.6 0" stroke="#6B6459" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M16 11.5 q1.3 1 2.6 0" stroke="#6B6459" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M11.3 14.7 Q14.5 16.2 17.7 14.7" stroke="#6B6459" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>
+      <div class="kq-digitballoon kq-splashdrift sd1 hue-teal pos-tl"><span class="kq-balloon-body"></span><span class="kq-balloon-knot"></span><span class="kq-balloon-string"></span></div>
+      <div class="kq-digitballoon kq-splashdrift sd2 hue-coral pos-l"><span class="kq-balloon-body"></span><span class="kq-balloon-knot"></span><span class="kq-balloon-string"></span></div>
+      <div class="kq-digitballoon kq-splashdrift sd3 hue-dusk pos-r"><span class="kq-balloon-body"></span><span class="kq-balloon-knot"></span><span class="kq-balloon-string"></span></div>
+      <div class="kq-digitballoon kq-splashdrift sd4 hue-rose pos-b"><span class="kq-balloon-body"></span><span class="kq-balloon-knot"></span><span class="kq-balloon-string"></span></div>
     </div>
     <span class="balloon-slot" aria-hidden="true"><i class="seed s1"></i><span class="balloon b1">K</span></span><span class="balloon-slot" aria-hidden="true"><i class="seed s2"></i><span class="balloon b2">i</span></span><span class="balloon-slot" aria-hidden="true"><i class="seed s3"></i><span class="balloon b3">d</span></span><span class="balloon-slot" aria-hidden="true"><i class="seed s4"></i><span class="balloon b4">Q</span></span>
   </section>

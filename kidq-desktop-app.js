@@ -230,12 +230,15 @@
   }
 
   // Break-count digit balloon (shared, brand.md §5; user request 2026-09-15):
-  // cycles the same four splash hues, in the splash's own order, once per
-  // digit change - teal -> gold -> coral -> dusk -> repeat. Shared by tree
-  // (5-wide, wraps once per hold) and count (10-wide, wraps twice). One
-  // helper, called from both screens' own setXCount functions, so the cycle
-  // itself can never drift between them.
-  const BALLOON_HUES = ["teal", "gold", "coral", "dusk"];
+  // cycles four hues once per digit change - teal -> rose -> coral -> dusk
+  // -> repeat. Three match the splash's own K/d/Q letters; rose replaces
+  // gold in the "i" slot (2026-09-15, user-directed) since gold measured
+  // 1.32-1.43:1 against this app's sky, failing the 3:1 floor outright -
+  // see kidq-desktop-app.css above .kq-digitballoon.hue-rose for the full
+  // measurement. Shared by tree (5-wide, wraps once per hold) and count
+  // (10-wide, wraps twice). One helper, called from both screens' own
+  // setXCount functions, so the cycle itself can never drift between them.
+  const BALLOON_HUES = ["teal", "rose", "coral", "dusk"];
   function setBalloonHue(el, i) {
     el.classList.remove(...BALLOON_HUES.map((h) => `hue-${h}`));
     el.classList.add(`hue-${BALLOON_HUES[i % BALLOON_HUES.length]}`);
@@ -1095,8 +1098,7 @@
   // reduced motion needs no special-casing here (steer, 2026-09-15).
   // Balloon (user request 2026-09-15): pop() now targets the BALLOON
   // wrapper, not the bare glyph, so the whole balloon bounces in together;
-  // setBalloonHue cycles the splash's own four hues, teal->gold->coral->
-  // dusk, one step per digit.
+  // setBalloonHue cycles teal->rose->coral->dusk, one step per digit.
   function setTreeCount(i) {
     treeCountBig.textContent = COUNT_BIG[i];
     treeCountTrail.textContent = COUNT_TRAIL[i];
@@ -1240,7 +1242,7 @@
   function setTenDigit(i) {
     countBig.textContent = TEN_BIG[i];
     countTrail.textContent = TEN_TRAIL[i];
-    setBalloonHue(countBalloon, i); // splash's own four hues, one step per tick
+    setBalloonHue(countBalloon, i); // teal/rose/coral/dusk, one step per tick
     // Quieter than tree's pop() (spec §1: "the entrance is a slow pulse,
     // not a bounce" - count is the settle game) - and, since the balloon
     // build (2026-09-15), a float rather than a scale-pulse: "drifting

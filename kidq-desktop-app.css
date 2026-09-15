@@ -146,6 +146,96 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 @keyframes deflate{to{opacity:0; transform:translateY(34px) scale(1.25,.55)}}
 @keyframes bob2{50%{transform:translateY(-9px) scale(1.02,.98)}}
 
+/* Large edge-anchored balloons framing the splash's KidQ letters, on a
+   night sky (§1's locked Givingli reference - warm cream, floating
+   illustrated objects; mobbin.com screen def2a712 for this specific
+   crop/anchor structure). An early pass scattered small (13-18px, .6
+   opacity) balloons mid-frame - checked against that reference and
+   rejected as reading like confetti, not the reference's calmer edge
+   framing. Reworked to match that reference's actual structure instead: a
+   few LARGE balloons (roughly a quarter of screen width), anchored at the
+   screen edges and partially cropped off them, fully opaque flat colour -
+   never drifting loose in the middle of the frame competing with the
+   centred letters.
+
+   Four balloons, one at each of four distinct edge positions (top-left
+   corner, left edge lower down, right edge at mid-height, one rising off
+   the bottom) - which also means all four `.kq-digitballoon` hues (css:709,
+   the flattened/muted recipe) get used, none skipped. Reuses the SAME
+   `.kq-digitballoon` markup/shape/hue classes as the break-count digit
+   balloons, not a new system - only size (`--cnt`, tiered below) and
+   position change. The finish stays deliberately flat/matte here even
+   though the hero KidQ letters keep their own glossy recipe (css:89-141,
+   unedited) - flat recedes as backdrop, glossy reads as foreground; a
+   figure/ground split, not an inconsistency (brand.md §5).
+
+   Size and position are both tiered off the same 601px/1100px container
+   query breakpoints the rest of the file already uses, not a new
+   breakpoint: this base ruleset holds the phone-tier numbers, and the two
+   `@container` blocks below add the tablet/wide-tier overrides. Phone
+   stays deliberately smaller (bodies roughly 75-105px) than wide's
+   ~140-200px - at ~390px width the crop margin against the centred letters
+   is much tighter, checked against the letters' own actual rendered box
+   (index.html, measured via the frozen-animation technique documented for
+   this repo) at both a 390px and a 1440px viewport before picking these
+   numbers, not just eyeballed.
+
+   Position is a small set of `pos-*` classes (top-left/left/right/bottom)
+   rather than per-balloon inline `left/top` - each position needs
+   different values at each tier, which a single inline style can't carry.
+   left/top/right/bottom mix a fixed negative px (how much of the balloon
+   bleeds off its anchored edge, kept proportional to that balloon's own
+   `--cnt` rather than the viewport) with a percentage on the other axis
+   (where along that edge it sits) - fixed crop, proportional placement.
+
+   Opacity is full, not the early pass's .6 - low opacity was itself part
+   of why that pass read as faint background dust instead of this
+   reference's confidently solid, opaque balloons. Bob is slow and small
+   (5.6s / -5px) - a balloon this large moving as fast as the early pass's
+   13-18px specks did would read as jitter, not a gentle drift.
+
+   Selector is `.kq-digitballoon.kq-splashdrift` (two classes, not one) so
+   it beats `.kq-digitballoon{position:relative}` (css:689, declared later
+   in the file) on specificity rather than source order - without it the
+   balloons silently fall back to static flow position and edge-anchoring
+   breaks outright. */
+.kq-digitballoon.kq-splashdrift{position:absolute; opacity:0; pointer-events:none;
+  filter:drop-shadow(0 2px 3px rgba(46,42,36,.22))}
+.kq-splashdrift .kq-balloon-string{opacity:.35}
+.kq-splashdrift.pos-tl{left:-24px; top:-18px; --cnt:78px}
+.kq-splashdrift.pos-l{left:-22px; top:60%; --cnt:68px}
+.kq-splashdrift.pos-r{right:-24px; top:34%; --cnt:74px}
+.kq-splashdrift.pos-b{bottom:-20px; left:14%; --cnt:64px}
+#screen-splash.go .kq-splashdrift{animation:kq-splashfade .8s ease-out forwards,
+  kq-splashbob 5.6s ease-in-out infinite}
+#screen-splash.go .sd1{animation-delay:.15s, .95s}
+#screen-splash.go .sd2{animation-delay:.3s, 1.1s; animation-duration:.8s, 6.2s}
+#screen-splash.go .sd3{animation-delay:.45s, 1.25s; animation-duration:.8s, 5.0s}
+#screen-splash.go .sd4{animation-delay:.6s, 1.4s; animation-duration:.8s, 5.8s}
+#screen-splash.off .kq-splashdrift{animation:kq-splashfade-out .3s ease-in forwards}
+@keyframes kq-splashfade{from{opacity:0; transform:translateY(10px) scale(.7)}
+  to{opacity:1; transform:translateY(0) scale(1)}}
+@keyframes kq-splashfade-out{to{opacity:0}}
+@keyframes kq-splashbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+/* Soft warm static halo, one per hue, layered as a second `drop-shadow`
+   behind each hue's existing shape-hugging one (`.kq-balloon-body`'s own
+   rule, css:691, unedited) - blur scaled off that balloon's own
+   `--cnt` so it stays in proportion across every tier above without
+   needing its own breakpoints. Static, no pulse/flicker: brand.md's
+   anti-overstimulation stance (also why the balloons above bob slowly
+   rather than snapping) applies to the halo too. User-chosen 2026-09-16
+   over a plain-balloon (no halo) and a different floating-light shape,
+   both evaluated side by side; see brand.md §5. */
+.kq-splashdrift.hue-teal .kq-balloon-body{filter:drop-shadow(0 3px 5px rgba(46,42,36,.28))
+  drop-shadow(0 0 calc(var(--cnt) * .26) rgba(31,122,109,.55))}
+.kq-splashdrift.hue-rose .kq-balloon-body{filter:drop-shadow(0 3px 5px rgba(46,42,36,.28))
+  drop-shadow(0 0 calc(var(--cnt) * .26) rgba(168,80,110,.55))}
+.kq-splashdrift.hue-coral .kq-balloon-body{filter:drop-shadow(0 3px 5px rgba(46,42,36,.28))
+  drop-shadow(0 0 calc(var(--cnt) * .26) rgba(194,84,63,.55))}
+.kq-splashdrift.hue-dusk .kq-balloon-body{filter:drop-shadow(0 3px 5px rgba(46,42,36,.28))
+  drop-shadow(0 0 calc(var(--cnt) * .26) rgba(111,90,168,.55))}
+
 /* ---------- login (who's watching) ---------- */
 .kq-whotitle{font-family:var(--disp); font-weight:800; font-size:34px; line-height:1.1;
   color:var(--cream); text-wrap:balance}
@@ -551,41 +641,56 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 
    ---------- break-count digit BALLOON (shared, user request 2026-09-15:
    "make them like coming on balloon") ----------
-   Balloon over ball: the splash's own KidQ letters (css:89-141) are already
+   Balloon over ball: the splash's own KidQ letters (css:89-141) are
    glossy inflating balloons - an established brand vocabulary, not a new
-   shape to teach. Same 5-stop radial-gradient RECIPE, same four hues in the
-   same order the splash uses (teal->gold->coral->dusk), cycling once per
-   digit change - `hue-<name>` on `.kq-digitballoon`, swapped in JS
-   (setBalloonHue, kidq-desktop-app.js).
-   The gradient's SIZE is the one deliberate departure from the splash's own
-   default farthest-corner sizing: an explicit `circle calc(var(--cnt) *
-   .729)` instead. The splash can use the default because its balloons ARE
-   the letters, filling their own glyph outline edge-to-edge; a small round
-   badge's own CENTRE - where the digit sits - only reaches t~0.3 of the
-   default gradient (still inside the near-white highlight/lower-highlight
-   band), which is why an early pass measured cream failing on teal/coral
-   too, not just gold. Shrinking the radius moves the badge's centre to
-   t~0.55 - the recipe's own literal MID-tone, past the 36/40% "true hue"
-   stop, short of the 62/66% deep one - without touching a single colour
-   value. Measured there (brand.md §5; `scratchpad/balloon-sweep-t.js` this
-   session), against the two text colours brand.md §12 already uses
-   everywhere else (cream `--cream`, ink `--ink`):
-     teal  #258776  cream 4.00:1  ink 3.25:1  -> cream (both pass; cream wins)
-     gold  #F6B43B  cream 1.66:1  ink 7.83:1  -> ink (cream fails outright)
-     coral #D0604C  cream 3.52:1  ink 3.69:1  -> cream (per the design brief;
-                                                  both pass, margin is close)
-     dusk  #7C67B6  cream 4.28:1  ink 3.04:1  -> cream (both pass; cream wins)
-   All eight combinations clear the 3:1 AA large-text floor; gold is the one
-   hue that needs ink, matching the sun-gold-vs-cream failure this app has
-   measured everywhere else it appears (css:521-530). The digit swaps colour
-   on the SAME `hue-gold` class the body's gradient swaps on - one class,
-   two effects, never drifts.
-   Knot: a small solid triangle in the SAME hue's own 100% (deepest) recipe
-   stop - the shape's own shadow colour, not a new one. String: a short,
-   plain, slightly-tilted thread in `--ink-soft` - neutral across all four
-   hues (real balloon string doesn't recolour with the balloon), and SHORT
-   on purpose (spec: "a short string" - a long one is more rigging than
-   read, at this badge scale). */
+   shape to teach. `hue-<name>` on `.kq-digitballoon`, swapped in JS
+   (setBalloonHue, kidq-desktop-app.js), one hue step per digit change.
+
+   FLATTENED AND MUTED (2026-09-15, user-directed, the second divergence
+   from the splash - the first was rose replacing gold, still true, see
+   below). This component originally borrowed the splash's own 5-stop
+   glossy radial-gradient recipe verbatim (near-white specular highlight
+   through a fully-saturated "true hue" to a near-black shadow - a shiny
+   3D sphere). Live in the browser, across repeated break screens rather
+   than the splash's one-time entrance, that read as brighter and glossier
+   than the rest of the app's own language, which is flat illustration
+   throughout (sun, moon, clouds, the tree-pose figure - none of them
+   glossy-shaded). Replaced with a simple 2-stop soft `linear-gradient`
+   (135deg, a light tint down to a single muted base tone) - a hint of
+   directional light, not a sphere - using base colours pulled DOWN in
+   saturation toward the app's own established palette register (teal's
+   base is literally `--teal` itself, brand.md's own UI-accent token; the
+   other three are muted the same direction, not just darkened):
+     teal  #1F7A6D  cream 4.72:1  vs bright sky 4.37:1  vs dim sky 3.94:1
+     rose  #A8506E  cream 4.75:1  vs bright sky 4.40:1  vs dim sky 3.96:1
+     coral #C2543F  cream 4.14:1  vs bright sky 3.83:1  vs dim sky 3.45:1
+     dusk  #6F5AA8  cream 5.18:1  vs bright sky 4.80:1  vs dim sky 4.32:1
+   All four clear the 3:1 AA large-text floor (digit text) and the same
+   self-imposed 3:1 floor for the balloon-vs-sky decoration, each with more
+   margin than the old glossy recipe had for teal/dusk and MUCH more than
+   the old recipe's coral (which narrowly missed on the dimmed sky, brand.md
+   §5) - flattening incidentally fixed that pre-existing narrow miss too,
+   not just the brightness complaint. Cream still works for the digit text
+   on all four, no ink-flip exception.
+
+   ROSE, NOT GOLD (2026-09-15, user-directed, the first divergence from the
+   splash): three of the four hues (teal/coral/dusk) still match the
+   splash's own K/d/Q letters in HUE, if not in exact recipe now. The
+   fourth was gold, matching the splash's "i" - measured as 1.32-1.43:1
+   against this app's warm sky, failing the 3:1 non-text floor outright
+   (the same finding already on record for the flat sun icon and every
+   other gold-on-cream surface, brand.md §5). That is not a narrow miss an
+   outline patches over - it is a hue that cannot read against a cream/
+   amber sky at any lightness gold is still recognisably gold at. Replaced
+   with `rose` (H~340°, distinct from teal H~171/coral H~8/dusk H~261),
+   chosen over darkening gold itself so the balloon reads as a real
+   different colour, not a muddy near-brown standing in for the sun.
+   Knot: a small solid triangle in a darker shade of the SAME hue's own
+   base tone - the shape's own shadow colour, not a new one. String: a
+   short, plain, slightly-tilted thread in `--ink-soft` - neutral across
+   all four hues (real balloon string doesn't recolour with the balloon),
+   and SHORT on purpose (spec: "a short string" - a long one is more
+   rigging than read, at this badge scale). */
 .kq-digitballoon{position:relative; display:block;
   width:calc(var(--cnt) * 1.15); height:calc(var(--cnt) * 1.505); flex-shrink:0}
 .kq-balloon-body{position:absolute; top:0; left:0; width:100%;
@@ -606,24 +711,18 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-digitballoon .kq-breakcount-big{position:absolute; inset:0 0 auto 0;
   height:calc(var(--cnt) * 1.32); display:flex; align-items:center;
   justify-content:center; font-size:calc(var(--cnt) * .78); color:var(--cream)}
-.kq-digitballoon.hue-gold .kq-breakcount-big{color:var(--ink)}
-
-.kq-digitballoon.hue-teal .kq-balloon-body{background-image:radial-gradient(
-  circle calc(var(--cnt) * .729) at 32% 24%,
-  #EFFFFA 0%, #9ADEC9 9%, #35A98F 36%, #1F7A6D 62%, #123F37 100%)}
-.kq-digitballoon.hue-teal .kq-balloon-knot{background:#123F37}
-.kq-digitballoon.hue-gold .kq-balloon-body{background-image:radial-gradient(
-  circle calc(var(--cnt) * .729) at 32% 24%,
-  #FFFBEA 0%, #FFE29A 9%, #FFC64D 40%, #F0A72E 66%, #8F5C12 100%)}
-.kq-digitballoon.hue-gold .kq-balloon-knot{background:#8F5C12}
-.kq-digitballoon.hue-coral .kq-balloon-body{background-image:radial-gradient(
-  circle calc(var(--cnt) * .729) at 32% 24%,
-  #FFF1EC 0%, #F5A897 9%, #E2705E 40%, #C2543F 66%, #6E2818 100%)}
-.kq-digitballoon.hue-coral .kq-balloon-knot{background:#6E2818}
-.kq-digitballoon.hue-dusk .kq-balloon-body{background-image:radial-gradient(
-  circle calc(var(--cnt) * .729) at 32% 24%,
-  #F6F1FF 0%, #C4B2EA 9%, #8E79C9 40%, #6F5AA8 66%, #382A66 100%)}
-.kq-digitballoon.hue-dusk .kq-balloon-knot{background:#382A66}
+.kq-digitballoon.hue-teal .kq-balloon-body{background-image:linear-gradient(
+  135deg, #7DB2AA 0%, #1F7A6D 65%)}
+.kq-digitballoon.hue-teal .kq-balloon-knot{background:#11433C}
+.kq-digitballoon.hue-rose .kq-balloon-body{background-image:linear-gradient(
+  135deg, #CD9AAB 0%, #A8506E 65%)}
+.kq-digitballoon.hue-rose .kq-balloon-knot{background:#5C2C3D}
+.kq-digitballoon.hue-coral .kq-balloon-body{background-image:linear-gradient(
+  135deg, #DC9C90 0%, #C2543F 65%)}
+.kq-digitballoon.hue-coral .kq-balloon-knot{background:#6B2E23}
+.kq-digitballoon.hue-dusk .kq-balloon-body{background-image:linear-gradient(
+  135deg, #AB9FCD 0%, #6F5AA8 65%)}
+.kq-digitballoon.hue-dusk .kq-balloon-knot{background:#3D325C}
 
 /* ---------- MOVE: stand like a tree ---------- */
 /* She is the hero - largest element, centred, bounded (the follow lesson:
@@ -1080,6 +1179,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 
 /* ---------- watching/cast layout: tablet tier ---------- */
 @container (min-width:601px){
+  /* splash backdrop balloons (css:144) - tablet tier */
+  .kq-splashdrift.pos-tl{left:-34px; top:-26px; --cnt:120px}
+  .kq-splashdrift.pos-l{left:-32px; top:64%; --cnt:105px}
+  .kq-splashdrift.pos-r{right:-36px; top:38%; --cnt:115px}
+  .kq-splashdrift.pos-b{bottom:-30px; left:20%; --cnt:100px}
   .kq-head{top:18px; left:26px}
   .kq-castpill{top:18px}
   .kq-arcwrap{top:0; height:130px}
@@ -1137,6 +1241,11 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 
 /* ---------- wide tier ---------- */
 @container (min-width:1100px){
+  /* splash backdrop balloons (css:144) - wide tier */
+  .kq-splashdrift.pos-tl{left:-40px; top:-30px; --cnt:150px}
+  .kq-splashdrift.pos-l{left:-38px; top:64%; --cnt:130px}
+  .kq-splashdrift.pos-r{right:-42px; top:38%; --cnt:145px}
+  .kq-splashdrift.pos-b{bottom:-36px; left:22%; --cnt:125px}
   .kq-head{top:26px; left:36px}
   .kq-head .av{width:46px; height:46px; font-size:19px}
   .kq-head .name{font-size:19px}
