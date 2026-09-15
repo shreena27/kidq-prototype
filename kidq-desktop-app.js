@@ -105,6 +105,37 @@
     breakType = v;
     $("#breaktype-toggle").textContent = `Break type: ${BREAK_TYPES[breakType]}`;
   }
+  // Stands in for the KidQ Parent app's family-wide "Sensory-friendly mode"
+  // setting ("softer sounds, calmer visuals, fewer transitions" - parent-app
+  // cross-check, PARENT-KID-CONTRADICTIONS item 7 / OPEN-ITEMS item 42). One
+  // flag, two effects: forces reduce-motion on (already delivers "calmer
+  // visuals, fewer transitions" - see setReducedMotion/setSensoryFriendly,
+  // defined near #motion-toggle below since the coupling needs followScreen)
+  // and drops every audio element this file plays to SENSORY_VOLUME. Never to
+  // 0 - softer, never silent - the audio carries meaning (e.g. the
+  // autoplay-off nudge chime, item 40, is how a pre-reader knows it's their
+  // move). Session-config field like breakType above: prepSession() seeds
+  // this live flag from state.session.sensoryFriendly every time a session
+  // starts (through setSensoryFriendly, which also keeps the demo bar's own
+  // Sensory label honest, mirroring setBreakType/#breaktype-toggle); the demo
+  // bar's Sensory control then overrides it live between prepSession() calls,
+  // same as breakType.
+  let sensoryFriendly = false;
+  // Softer, never silent. A starting point, not a tuned value - real number
+  // wants testing against real families (PARENT-KID-CONTRADICTIONS item 7).
+  // Scope: only audio the app itself produces as sound design - jingle,
+  // chime, spoken instructions (say/sayLine) and the follow-break's
+  // synthesized catch sound (plip). `video` is deliberately untouched: it is
+  // permanently `video.muted = true` (startWatching) - the demo clips carry
+  // no needed audio, so there is nothing there for this flag to soften.
+  const SENSORY_VOLUME = 0.4;
+  // The reduce-motion value that was live the moment sensory-friendly last
+  // forced it on - restored when sensory-friendly turns off, so releasing the
+  // force never stomps a reduce-motion the user chose independently before
+  // the force (see setSensoryFriendly below). OS-level
+  // prefers-reduced-motion (reducedMotion's own startup default, above) still
+  // governs the baseline either way; this only remembers what to snap back to.
+  let preSensoryMotion = false;
   const later = (fn, ms) => { const id = setTimeout(fn, reducedMotion ? Math.min(ms, 200) : ms); timers.push(id); return id; };
   // Phase timing for activity breaks. Unlike later(), this does NOT clamp under
   // reduced motion: a 1.5s hold in a break is the activity itself, not a
@@ -112,7 +143,11 @@
   // Still pushed into `timers`, so clearTimers() and showScreen() cancel it.
   const hold = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
-  const safePlay = (m) => { if (!m) return; m.currentTime = 0; m.play().catch(() => {}); };
+  // Volume is set here, at play time, not once at load - so toggling
+  // sensory-friendly mid-session applies to the very next sound, not the
+  // next page load. Explicit 1 when off (not just "leave it alone") is what
+  // restores full volume after the flag is turned back off.
+  const safePlay = (m) => { if (!m) return; m.currentTime = 0; m.volume = sensoryFriendly ? SENSORY_VOLUME : 1; m.play().catch(() => {}); };
   const attemptPlay = (m) => { m.play().catch(() => { later(() => m.play().catch(() => {}), 200); }); };
 
   /* ---------- spoken instructions ----------
@@ -151,6 +186,7 @@
       if (voicePick) u.voice = voicePick;
       u.rate = 0.9;   // unhurried, to match the pace of everything else here
       u.pitch = 1.05; // a touch warm, well short of chirpy
+      u.volume = sensoryFriendly ? SENSORY_VOLUME : 1; // sensory-friendly (item 42): same constant as every other audio path
       speech.speak(u);
     } catch (e) { /* never let a missing voice break a break */ }
   }
@@ -166,6 +202,7 @@
     const fallBack = () => { if (!fellBack) { fellBack = true; say(text); } };
     try {
       clip.currentTime = 0;
+      clip.volume = sensoryFriendly ? SENSORY_VOLUME : 1; // set at play time, same reasoning as safePlay above
       speakingClip = clip;
       const p = clip.play();
       if (p && p.catch) p.catch(fallBack);
@@ -300,10 +337,12 @@
       videos: [...src.videos],
       // Parent-configured break settings. prepSession PROJECTS the session
       // object — a field not listed here is silently dropped (as pickedBy
-      // already was, above) — so these two get their defaults applied right
+      // already was, above) — so these get their defaults applied right
       // here, once, rather than at every read site.
       breakEveryMinutes: src.breakEveryMinutes ?? 15,
-      breakType: src.breakType ?? "alternate"
+      breakType: src.breakType ?? "alternate",
+      // The parent app's family-wide Sensory-friendly setting (item 42).
+      sensoryFriendly: src.sensoryFriendly ?? false
     } : null;
     state.watched = new Set();
     state.progress = {};
@@ -316,6 +355,11 @@
     // stays in sync too. breakType itself is read live at gameForBreak() fire
     // time, not captured here — this line only sets its starting value.
     setBreakType(state.session ? state.session.breakType : "alternate");
+    // Seeds the live sensoryFriendly flag the same way, through
+    // setSensoryFriendly() (defined near #motion-toggle below, since it
+    // composes with the reduce-motion coupling) so the demo bar's Sensory
+    // label never drifts from what the app is actually doing either.
+    setSensoryFriendly(state.session ? state.session.sensoryFriendly : false);
     return !!state.session;
   }
 
@@ -895,11 +939,17 @@
       plipCtx = plipCtx || new (window.AudioContext || window.webkitAudioContext)();
       if (plipCtx.state === "suspended") plipCtx.resume().catch(() => {});
       const t = plipCtx.currentTime;
+      // Sensory-friendly mode (item 42): this is real app audio (the
+      // follow-the-sun catch sound), just synthesized via Web Audio rather
+      // than an <audio> element, so it gets the same treatment as every
+      // other sound the app plays - scaling the gain envelope's peak,
+      // since a GainNode has no .volume property to set directly.
+      const vol = sensoryFriendly ? SENSORY_VOLUME : 1;
       [659, 880].forEach((f, i) => {
         const o = plipCtx.createOscillator(), g = plipCtx.createGain();
         o.type = "sine"; o.frequency.value = f;
         g.gain.setValueAtTime(0.0001, t + i * .09);
-        g.gain.exponentialRampToValueAtTime(.16, t + i * .09 + .02);
+        g.gain.exponentialRampToValueAtTime(.16 * vol, t + i * .09 + .02);
         g.gain.exponentialRampToValueAtTime(.0001, t + i * .09 + .24);
         o.connect(g); g.connect(plipCtx.destination);
         o.start(t + i * .09); o.stop(t + i * .09 + .26);
@@ -1125,8 +1175,11 @@
     KidQData.whatsNext.forEach((item) => {
       const card = document.createElement("div");
       card.className = "wn-card" + (item.picked ? " wn-pick" : "");
+      // the pick's caption reuses the heart-line vocabulary (beating coral heart
+      // + "who picked" text) from the pitch's badge, re-skinned calm: no pill,
+      // no floating hearts - same rule as every port from the proposal file
       card.innerHTML = `<div class="scene">${SCENES[item.scene] || ""}</div><span>${item.label}</span>` +
-        (item.picked ? `<svg class="wn-pick-heart" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg>` : "");
+        (item.picked ? `<span class="wn-pick-tag"><svg class="kq-mheart" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 17 C4 12 2 8.5 4.2 6.2 A3.4 3.4 0 0 1 10 7.4 A3.4 3.4 0 0 1 15.8 6.2 C18 8.5 16 12 10 17 Z" fill="#E2705E"/></svg>${item.pickedBy || "Mumma & Papa"}'s pick</span>` : "");
       row.appendChild(card);
     });
     showScreen("screen-all-done");
@@ -1245,18 +1298,20 @@
   });
 
   // Previews the KidQ Parent app's break-interval setting (every 10/15/20
-  // min). Unlike breakType above, this CANNOT apply mid-session — breaks are
-  // planned once, at prepSession() — so this control restarts the session,
-  // always into the demo aarav session (the one with breaks to show). It
-  // runs the same [data-demo] prologue every jump above uses (clearTimers();
-  // video.pause();) before restarting, or a pending autoAdvance later() /
-  // autoplay-off nudge hold() chain would fire into the new session with
-  // stale state. The override carries the CURRENT live breakType forward
-  // (not the aarav session's own default) so cycling the interval doesn't
-  // silently revert a type the demo bar was already showing — a plain login
-  // or "↻ Restart full flow" still reseeds breakType from the session's own
-  // config, which is correct: the parent's config is the source of truth,
-  // and setBreakType() now keeps this button's label honest either way.
+  // min). Unlike breakType (and sensoryFriendly, item 42) above, this
+  // CANNOT apply mid-session — breaks are planned once, at prepSession() —
+  // so this control restarts the session, always into the demo aarav
+  // session (the one with breaks to show). It runs the same [data-demo]
+  // prologue every jump above uses (clearTimers(); video.pause();) before
+  // restarting, or a pending autoAdvance later() / autoplay-off nudge
+  // hold() chain would fire into the new session with stale state. The
+  // override carries the CURRENT live breakType AND sensoryFriendly forward
+  // (not the aarav session's own defaults) so cycling the interval doesn't
+  // silently revert either setting the demo bar was already showing — a
+  // plain login or "↻ Restart full flow" still reseeds both from the
+  // session's own config, which is correct: the parent's config is the
+  // source of truth, and setBreakType()/setSensoryFriendly() now keep this
+  // button's siblings' labels honest either way.
   const BREAK_EVERY_OPTIONS = [10, 15, 20];
   let demoBreakEvery = 15;
   $("#breakevery-toggle").addEventListener("click", (e) => {
@@ -1265,15 +1320,23 @@
     const i = BREAK_EVERY_OPTIONS.indexOf(demoBreakEvery);
     demoBreakEvery = BREAK_EVERY_OPTIONS[(i + 1) % BREAK_EVERY_OPTIONS.length];
     e.currentTarget.textContent = `Breaks: every ${demoBreakEvery}m`;
-    prepSession("aarav", { ...KidQData.sessions.aarav, breakEveryMinutes: demoBreakEvery, breakType });
+    prepSession("aarav", { ...KidQData.sessions.aarav, breakEveryMinutes: demoBreakEvery, breakType, sensoryFriendly });
     startSunrise();
   });
 
-  $("#motion-toggle").addEventListener("click", (e) => {
-    reducedMotion = !reducedMotion;
+  // Applies a reduced-motion value everywhere it must be reflected - the
+  // live variable, the root class, and #motion-toggle's own pressed
+  // state/label - extracted out of the toggle's click handler (item 42) so
+  // sensory-friendly's forced-on/released-off transitions (setSensoryFriendly,
+  // below) can reuse exactly the effects a manual toggle produces, instead of
+  // duplicating them. Defined here rather than up with reducedMotion's other
+  // declarations because it needs followScreen, below.
+  function setReducedMotion(v) {
+    reducedMotion = v;
     document.documentElement.classList.toggle("reduce-motion", reducedMotion);
-    e.currentTarget.setAttribute("aria-pressed", String(reducedMotion));
-    e.currentTarget.textContent = reducedMotion ? "Motion reduced" : "Reduce motion";
+    const btn = $("#motion-toggle");
+    btn.setAttribute("aria-pressed", String(reducedMotion));
+    btn.textContent = reducedMotion ? "Motion reduced" : "Reduce motion";
     // Never restart mid-ending: the break stays "active" through its own
     // celebration AND through the silent hold startChoice/startSunset uses to
     // reach the moon (neither calls showScreen), so a naive restart-if-active
@@ -1283,12 +1346,42 @@
     if (followScreen.classList.contains("active") && !followScreen.classList.contains("celebrate")) {
       clearTimers(); startFollow();
     }
+  }
+  $("#motion-toggle").addEventListener("click", () => {
+    setReducedMotion(!reducedMotion);
   });
   if (reducedMotion) {
     document.documentElement.classList.add("reduce-motion");
     $("#motion-toggle").setAttribute("aria-pressed", "true");
     $("#motion-toggle").textContent = "Motion reduced";
   }
+
+  // Sensory-friendly mode (item 42): forces reduce-motion on/off through
+  // setReducedMotion above, without ever stomping a reduce-motion the user
+  // chose independently before the force. `changed` guards BOTH the
+  // motion-coupling side effect (skip entirely when sensoryFriendly's own
+  // value isn't actually moving - e.g. prepSession() reseeding to the same
+  // default on every plain login must not touch motion at all) and, within
+  // that, setReducedMotion is only called when the target value actually
+  // differs from the live one, so releasing the force back to an unchanged
+  // value can't spuriously restart an in-flight follow break.
+  function setSensoryFriendly(v) {
+    const changed = v !== sensoryFriendly;
+    sensoryFriendly = v;
+    const btn = $("#sensory-toggle");
+    btn.setAttribute("aria-pressed", String(sensoryFriendly));
+    btn.textContent = sensoryFriendly ? "Sensory: On" : "Sensory: Off";
+    if (!changed) return;
+    if (sensoryFriendly) {
+      preSensoryMotion = reducedMotion; // remember what was live before the force
+      if (!reducedMotion) setReducedMotion(true);
+    } else if (reducedMotion !== preSensoryMotion) {
+      setReducedMotion(preSensoryMotion); // release: restore, never assume off
+    }
+  }
+  $("#sensory-toggle").addEventListener("click", () => {
+    setSensoryFriendly(!sensoryFriendly);
+  });
 
   // Debounced so a window drag doesn't restart the break once per resize
   // event (M7); the celebrate guard mirrors the motion-toggle handler above

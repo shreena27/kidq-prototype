@@ -633,7 +633,7 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-wn{opacity:0; transform:translateY(14px); transition:opacity .5s ease-out, transform .5s ease-out}
 .kq-wn.in{opacity:1; transform:none}
 .kq-wn .wn-label{font-weight:700; font-size:12px; letter-spacing:.14em; text-transform:uppercase;
-  color:var(--dusk); text-align:center; margin-bottom:14px}
+  color:var(--dusk); text-align:center; margin-bottom:26px}
 .wn-row{display:flex; gap:10px; justify-content:center}
 .wn-card{position:relative; background:var(--cream); border-radius:16px; padding:8px 8px 10px;
   display:flex; flex-direction:column; align-items:center; gap:6px; width:104px; opacity:0;
@@ -650,10 +650,18 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
   0 10px 24px -14px rgba(0,0,0,.5); animation:kq-pickpop .5s cubic-bezier(.34,1.56,.64,1)}
 @keyframes kq-pickpop{0%{transform:scale(1)}40%{transform:scale(1.07,.94)}
   70%{transform:scale(.98,1.03)}100%{transform:scale(1)}}
-.wn-pick-heart{position:absolute; top:6px; right:6px; width:15px; height:15px; opacity:0;
-  transform:scale(.4); transition:opacity .4s ease .15s, transform .4s cubic-bezier(.34,1.56,.64,1) .15s}
-.kq-wn.choose .wn-pick .wn-pick-heart{opacity:1; transform:scale(1);
-  animation:kq-mbeat 2.6s ease-in-out .55s infinite}
+/* .wn-pick .wn-pick-tag (not the bare class) - the tag is itself a <span>
+   nested inside .wn-card, so the plain .wn-card span{color:var(--ink)...}
+   rule above (specificity 0,1,1) would otherwise silently beat a bare
+   .wn-pick-tag{...} (0,1,0) on color/font-size/font-weight, leaving the
+   caption rendering as dark ink text instead of cream - found live in
+   Chrome while verifying this change, not visible from the CSS alone. */
+.wn-pick .wn-pick-tag{position:absolute; top:-22px; left:50%; display:flex; align-items:center;
+  gap:4px; font-weight:700; font-size:11px; color:var(--cream); white-space:nowrap; opacity:0;
+  transform:translateX(-50%) scale(.4);
+  transition:opacity .4s ease .15s, transform .4s cubic-bezier(.34,1.56,.64,1) .15s}
+.wn-pick-tag .kq-mheart{width:12px; height:12px}
+.kq-wn.choose .wn-pick .wn-pick-tag{opacity:1; transform:translateX(-50%) scale(1)}
 
 /* ---------- no session ---------- */
 .kq-moonside{position:absolute; right:44px; top:110px; width:94px; height:94px; border:none;
