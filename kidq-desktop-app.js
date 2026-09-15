@@ -1384,6 +1384,7 @@
 
   /* ---------- all done ---------- */
   const allDone = $("#screen-all-done");
+  const doneAnnounce = $("#done-announce");
 
   // high-five character animation (Lottie; the inline SVG hands are the fallback)
   let hfAnim = null;
@@ -1420,9 +1421,18 @@
     }
     safePlay(chime);
     pop($("#done-moon"), true); // the moon wakes up and wobbles back at you
+    // the headline/hf-say swaps above are plain class toggles with no
+    // aria-live of their own (item 52) - this is the one place the whole
+    // completion moment gets announced, whether the tap landed or this
+    // fired on the auto path
+    doneAnnounce.textContent = `High five! What a day! Bye bye, ${state.profile ? state.profile.name : "Aarav"}!`;
   }
   function startAllDone() {
     allDone.classList.remove("hifived");
+    // a same-page restart can reach all-done a second time; clearing here
+    // guarantees the next fiveUp() sets are a genuine text change, so the
+    // live region announces every time, not just the first
+    doneAnnounce.textContent = "";
     initHifive();
     if (hfAnim) {
       // entrance: the two hands rise in and wait, palms open, for the child's five
@@ -1468,6 +1478,16 @@
   $("#done-moon").addEventListener("click", (e) => pop(e.currentTarget, true));
 
   /* ---------- no session ---------- */
+  const noSessionAnnounce = $("#no-session-announce");
+  // aria-live only fires on a genuine text change - this screen's whole
+  // interaction is a repeated fidget, so setting the same string twice in a
+  // row (touching the same button twice) would silently drop the second
+  // announcement, reproducing the exact gap item 49 fixed. Alternating a
+  // trailing NBSP keeps every activation a real change without touching the
+  // copy itself. Both handlers below share this one approach.
+  function announceNoSession(msg) {
+    noSessionAnnounce.textContent = (noSessionAnnounce.textContent === msg) ? msg + "\u00A0" : msg;
+  }
   function startNoSession() {
     const y = state.profile ? KidQData.yesterdays[state.profile.id] : null;
     $("#yesterday-btn").style.display = y ? "" : "none";
@@ -1477,8 +1497,12 @@
   $("#sleeping-sun").addEventListener("click", (e) => {
     const el = e.currentTarget;
     el.classList.remove("stir"); void el.offsetWidth; el.classList.add("stir");
+    announceNoSession("The sun is still sleeping. Shh!");
   });
-  $("#waiting-moon").addEventListener("click", (e) => pop(e.currentTarget, true));
+  $("#waiting-moon").addEventListener("click", (e) => {
+    pop(e.currentTarget, true);
+    announceNoSession("The moon is keeping watch. Shh!");
+  });
   $("#yesterday-btn").addEventListener("click", () => {
     const y = KidQData.yesterdays[state.profile ? state.profile.id : "meera"];
     if (!y) return;
@@ -1499,7 +1523,15 @@
   /* ---------- cast (visual mock only) ---------- */
   const cast = $("#screen-cast");
   positionSun($("#cast-sun"), 0.5);
-  $("#cast-pause").addEventListener("click", () => cast.classList.toggle("paused"));
+  // mirrors #watch-pause's exact pattern (js ~647): flip the aria-label with
+  // the state instead of leaving it hardcoded to "Pause". .kq-castpill's own
+  // Playing/Paused swap already carries aria-live (index.html), so no
+  // separate announcement is needed here.
+  $("#cast-pause").addEventListener("click", (e) => {
+    const pausing = !cast.classList.contains("paused");
+    cast.classList.toggle("paused", pausing);
+    e.currentTarget.setAttribute("aria-label", pausing ? "Resume the video on the TV" : "Pause the video on the TV");
+  });
 
   /* ---------- demo bar ---------- */
   function markDemo(name) {
