@@ -1252,6 +1252,19 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
    explicit instead of depending on that shape never changing. */
 .reduce-motion .wnheart{display:none}
 
+/* Low-emphasis exit from the all-done screen straight to night-light -
+   deliberately styled well under the high-five/what's-next weight, since
+   this is the "leave the negotiation" option, not something to compete with
+   the celebration. Sits in the same flex column as .kq-wn, so its own
+   gap:24px already separates it - the negative margin trims that down to a
+   size proportionate to a text link rather than a card row. */
+.kq-leave{border:none; background:none; padding:4px 8px; margin-top:-10px;
+  font-family:var(--body); font-weight:600; font-size:13px; color:var(--dusk);
+  opacity:.75; text-decoration:underline; text-underline-offset:2px; cursor:pointer;
+  transition:opacity .2s ease}
+.kq-leave:hover{opacity:1}
+.kq-leave:focus-visible{outline:3px solid var(--teal-on-dark); outline-offset:2px; opacity:1}
+
 /* ---------- no session ---------- */
 .kq-moonside{position:absolute; right:44px; top:110px; width:94px; height:94px; border:none;
   padding:0; background:none; cursor:pointer; animation:kq-mfloat 7s ease-in-out infinite}
@@ -1290,6 +1303,15 @@ button{font-family:inherit; -webkit-tap-highlight-color:transparent}
 .kq-nlhint .lit-txt{display:none; color:var(--sun)}
 #screen-night-light.lit .kq-nlhint .off-txt{display:none}
 #screen-night-light.lit .kq-nlhint .lit-txt{display:inline}
+/* Testing/demo-only reset, kept deliberately minor - well below the hint's
+   own weight - so it reads as a small utility, not a second interactive
+   feature competing with the moon (the removed demo bar's mistake). */
+.kq-nlreset{display:block; margin-top:-10px; border:none; background:none;
+  font-family:var(--body); font-weight:600; font-size:12px; color:var(--dusk);
+  opacity:.55; text-decoration:underline; text-underline-offset:2px; cursor:pointer;
+  transition:opacity .2s ease}
+.kq-nlreset:hover{opacity:.85}
+.kq-nlreset:focus-visible{outline:3px solid var(--teal-on-dark); outline-offset:2px; opacity:.85}
 
 /* base tier is a flex column too — real phone browsers vary in height,
    and the 844px-fixed absolute layout collides below ~700px */

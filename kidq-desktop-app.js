@@ -10,7 +10,8 @@
   const KidQData = {
     profiles: [
       { id: "aarav", name: "Aarav", color: "#1F7A6D", face: "#FAF4E8" },
-      { id: "meera", name: "Meera", face: "#2E2A24", color: "#C9B8E8" }
+      { id: "meera", name: "Meera", face: "#2E2A24", color: "#C9B8E8" },
+      { id: "kabir", name: "Kabir", color: "#E2705E", face: "#FAF4E8" }
     ],
     // today's parent-picked session per profile; null = no session yet
     sessions: {
@@ -37,7 +38,11 @@
             src: "proposal-src/clip-b.mp4", poster: "proposal-src/thumb-b.jpg" }
         ]
       },
-      meera: null
+      meera: null,
+      // Kabir has no session data at all - he's the night-light demo profile
+      // (seeded done-today, below), never reaches the has/no-session branch
+      // that would read this.
+      kabir: null
     },
     // yesterday's session (per profile) — powers the no-session replay path
     yesterdays: {
@@ -124,6 +129,34 @@
   // Still pushed into `timers`, so clearTimers() and showScreen() cancel it.
   const hold = (fn, ms) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
   const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  /* ---------- reopen-after-done persistence ----------
+     The night-light screen (below) is the natural state a child finds on
+     reopening the app once today's session is already used up - not a
+     same-session dead end. That needs to survive a real page reload, so it
+     lives in localStorage, date-stamped rather than a bare boolean: "is the
+     stored date today's date" IS the staleness check, with no separate
+     midnight-reset code needed. No date/localStorage helper already existed
+     in this file to reuse, so this uses the platform's own
+     `Date.toDateString()`. try/catch throughout: storage can be unavailable
+     (private browsing, embedded webview) and that must degrade to "just run
+     the normal flow", never throw.
+
+     Keyed per profile, not one bare flag: this is a household device with
+     more than one child on the login screen, and "today's session used up"
+     is true for whichever child actually finished theirs, not the app as a
+     whole - Aarav being done can't send Meera to night-light too. */
+  const SESSION_DONE_KEY = "kidq-session-done-date";
+  function markSessionDone(profileId) {
+    try { localStorage.setItem(`${SESSION_DONE_KEY}:${profileId}`, new Date().toDateString()); } catch (e) {}
+  }
+  function isSessionDoneToday(profileId) {
+    try { return localStorage.getItem(`${SESSION_DONE_KEY}:${profileId}`) === new Date().toDateString(); } catch (e) { return false; }
+  }
+  function clearSessionDone(profileId) {
+    try { localStorage.removeItem(`${SESSION_DONE_KEY}:${profileId}`); } catch (e) {}
+  }
+
   // Volume is set here, at play time, not once at load - so toggling
   // sensory-friendly mid-session applies to the very next sound, not the
   // next page load. Explicit 1 when off (not just "leave it alone") is what
@@ -475,7 +508,15 @@
         pop(btn);
         safePlay(jingle);
         const has = prepSession(p.id);
-        later(() => (has ? startSunrise() : startNoSession()), 650);
+        // A profile already marked done today (see reopen-after-done above)
+        // goes straight to night-light, same as reopening the app would -
+        // checked ahead of the has/no-session branch since "already watched"
+        // takes priority over whatever today's session data says.
+        later(() => {
+          if (isSessionDoneToday(p.id)) startNightLight();
+          else if (has) startSunrise();
+          else startNoSession();
+        }, 650);
       });
       whoRow.appendChild(btn);
     });
@@ -1534,6 +1575,11 @@
     doneAnnounce.textContent = `High five! What a day! Bye bye, ${state.profile ? state.profile.name : "Aarav"}!`;
   }
   function startAllDone() {
+    // Today's session counts as used up the moment this screen is reached,
+    // not only if the child later taps "Leave for now" below - reopening the
+    // app after just walking away from all-done should land on night-light
+    // too (see the reopen-persistence block up top).
+    if (state.profile) markSessionDone(state.profile.id);
     allDone.classList.remove("hifived");
     // a same-page restart can reach all-done a second time; clearing here
     // guarantees the next fiveUp() sets are a genuine text change, so the
@@ -1582,6 +1628,14 @@
   // on tap here to run clearTimers() for us).
   $("#high-five").addEventListener("click", fiveUp);
   $("#done-moon").addEventListener("click", (e) => pop(e.currentTarget, true));
+  // Leaving early runs the exact same real transition a later reopen would
+  // (today's flag is already set by startAllDone() above, but this is its
+  // own explicit trigger too) - shares startNightLight() rather than a second,
+  // divergent way of getting there.
+  $("#leave-for-now").addEventListener("click", () => {
+    if (state.profile) markSessionDone(state.profile.id);
+    startNightLight();
+  });
 
   /* ---------- no session ---------- */
   const noSessionAnnounce = $("#no-session-announce");
@@ -1617,12 +1671,30 @@
 
   /* ---------- night light ---------- */
   const nightLight = $("#screen-night-light");
+  // No per-visit setup needed - the screen's copy is static and the moon
+  // starts unlit every time it's shown fresh (a reload always rebuilds the
+  // DOM at its default state), so this is showScreen() alone. Still a real
+  // startX() function, not an inline showScreen() call, for the same reason
+  // every other screen entry point is one: a single, named place to land on.
+  function startNightLight() {
+    $("#night-greet").innerHTML = `Bye bye,<br>${state.profile ? state.profile.name : "Aarav"}!`;
+    showScreen("screen-night-light");
+  }
   $("#night-moon").addEventListener("click", (e) => {
     const lit = !nightLight.classList.contains("lit");
     nightLight.classList.toggle("lit", lit);
     e.currentTarget.setAttribute("aria-pressed", String(lit));
     pop(e.currentTarget, true);
     if (lit) safePlay(chime);
+  });
+  // Testing/demo only: with the old demo bar gone, this is the one way back
+  // to a fresh "start of day" state without editing localStorage by hand.
+  // Deliberately a single low-emphasis in-context link, not a revival of the
+  // stripped multi-button toolbar (PR #36). Reuses startSplash() itself - the
+  // exact same call this file makes on a real fresh load, below.
+  $("#night-reset").addEventListener("click", () => {
+    if (state.profile) clearSessionDone(state.profile.id);
+    startSplash();
   });
 
   /* ---------- cast (visual mock only) ---------- */
@@ -1701,5 +1773,22 @@
     }
   });
 
+  // Demo seed: Kabir's profile always starts a fresh page load already
+  // marked done for today, so his avatar on the login screen is a real,
+  // repeatable way to reach night-light - "the state a kid finds reopening
+  // the app after today's session is already used up" - without having to
+  // play a whole session through first. Runs once per load, after the
+  // per-profile flag helpers exist; "Reset for a new day" on the night-light
+  // screen clears it for the rest of that load same as it would for any
+  // other profile. Aarav and Meera are untouched - Meera still has her own
+  // no-session/yesterday-replay demo path (KidQData.yesterdays.meera above),
+  // which a done-today flag on her would have made unreachable from login.
+  markSessionDone("kabir");
+
+  // Reopening the app always goes back through splash/login now, not
+  // straight to night-light - with two profiles on one device, "today's
+  // session used up" is a per-child fact the login screen has to ask about
+  // (see the click handler above), not something the app can assume before
+  // anyone's picked who they are.
   startSplash();
 })();
